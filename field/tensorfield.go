@@ -2,6 +2,7 @@ package field
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"strings"
 
@@ -10,14 +11,14 @@ import (
 	"stj/fieldline/tensor"
 )
 
-// TensorQty 是张量场中一个数据点的所有信息. 其中张量的特征值 V1
-// 和特征向量的导数 D1 总是相对应, 同样, V2 总是和 D2 对应. 虽然 V1, V2, D1, D2
+// TensorQty 是张量场中一个数据点的所有信息. 其中张量的特征值 V1 和流线
+// 函数的导数 D1 总是相对应, 同样, V2 总是和 D2 对应. 虽然 V1, V2, D1, D2
 // 可由张量数据求得, 但为了加快运算, 这里事先将其求出并存储.
 type TensorQty struct {
 	PointQty
 	tensor.Tensor
 	V1, V2  float64 // 特征值
-	D1, D2  float64 // 特征向量的导数(斜率)
+	D1, D2  float64 // 流线函数的导数(斜率)
 	degen   bool    //
 	unified bool
 }
@@ -30,7 +31,7 @@ func NewTensorQty(x, y, xx, yy, xy float64) *TensorQty {
 	return t
 }
 
-// swapEigen 方法将张量的两个特征值和两个特征向量的导数同时互换.
+// swapEigen 方法将张量的两个特征值和两个流线函数的导数同时互换.
 func (t *TensorQty) swapEigen() {
 	t.V1, t.V2 = t.V2, t.V1
 	t.D1, t.D2 = t.D2, t.D1
@@ -43,7 +44,7 @@ type TensorField struct {
 	unified bool
 }
 
-// Unified 判断张量场中各个特征值, 特征向量的导数是否已进行过一致性处理.
+// Unified 判断张量场中各个特征值, 流线函数的导数是否已进行过一致性处理.
 // 即在同一超流线, 以及在不同超流线但同一族(超流线具有大致相同的走势)总
 // 是按相同的序列排列(V1, V2 以及 D1, D2).
 func (tf *TensorField) Unified(t *TensorQty) bool {
@@ -51,7 +52,7 @@ func (tf *TensorField) Unified(t *TensorQty) bool {
 }
 
 // Value 根据输入的场中任意点的坐标, 利用空间插值方法(多变量插值), 根据场中已知
-// 点获得该点的某个场量值. name 的值可以为 "xx", "yy", "xy", "V1", "v2", "d1",
+// 点获得该点的某个场量值. name 的值可以为 "xx", "yy", "xy", "v1", "v2", "d1",
 // "d2"(小写, 大写及大小写混合形式都行).
 func (tf *TensorField) Value(x, y float64, name string) (v float64, err error) {
 	if !tf.unified {
@@ -105,6 +106,41 @@ func (tf *TensorField) interp(ids []int, x, y float64, name string) (v float64, 
 		ss[i] = &ScalarQty{X: tf.data[ids[i]].X, Y: tf.data[ids[i]].Y, V: v}
 	}
 	return IDW(ss, x, y, DefaultIDWPower)
+}
+
+// XX 方法通过空间插值方法获得张量场内任意点 (x, y) 处的 XX 值.
+func (tf *TensorField) XX(x, y float64) (v float64, err error) {
+	return tf.Value(x, y, "xx")
+}
+
+// YY 方法通过空间插值方法获得张量场内任意点 (x, y) 处的 YY 值.
+func (tf *TensorField) YY(x, y float64) (v float64, err error) {
+	return tf.Value(x, y, "yy")
+}
+
+// XY 方法通过空间插值方法获得张量场内任意点 (x, y) 处的 XY 值.
+func (tf *TensorField) XY(x, y float64) (v float64, err error) {
+	return tf.Value(x, y, "xy")
+}
+
+// V1 方法通过空间插值方法获得张量场内任意点 (x, y) 处的特征值 V1.
+func (tf *TensorField) V1(x, y float64) (v float64, err error) {
+	return tf.Value(x, y, "v1")
+}
+
+// V2 方法通过空间插值方法获得张量场内任意点 (x, y) 处的特征值 V2.
+func (tf *TensorField) V2(x, y float64) (v float64, err error) {
+	return tf.Value(x, y, "v2")
+}
+
+// D1 方法通过空间插值方法获得张量场内任意点 (x, y) 处的流线函数导数(特征向量斜率) D1.
+func (tf *TensorField) D1(x, y float64) (v float64, err error) {
+	return tf.Value(x, y, "d1")
+}
+
+// D2 方法通过空间插值方法获得张量场内任意点 (x, y) 处的流线函数导数(特征向量斜率) D2.
+func (tf *TensorField) D2(x, y float64) (v float64, err error) {
+	return tf.Value(x, y, "d2")
 }
 
 // Add 方法将一个张量点添加到张量场中. 如果点所处的位置超过张量场的范围,
@@ -228,6 +264,7 @@ func (tf *TensorField) Unify() {
 	// 将第一个点的 unified 字段设为 true, 作为后续设置的引子(参照)
 	for idx := 0; idx < len(tf.grid.cells); idx++ {
 		if len(tf.grid.cells[idx].IDs) != 0 {
+			//tf.data[tf.grid.cells[idx].IDs[0]].swapEigen()
 			tf.data[tf.grid.cells[idx].IDs[0]].unified = true
 			break
 		}
@@ -259,8 +296,10 @@ func (tf *TensorField) unify(ids []int) bool {
 		return false
 	}
 	unifiedCount := 0
+	ss := make([]*ScalarQty, 0, len(ids))
 	for i := 0; i < len(ids); i++ {
 		if tf.data[ids[i]].unified {
+			ss = append(ss, &ScalarQty{X: tf.data[ids[i]].X, Y: tf.data[ids[i]].Y, V: tf.data[ids[i]].D1})
 			unifiedCount++
 		}
 	}
@@ -269,21 +308,18 @@ func (tf *TensorField) unify(ids []int) bool {
 	} else if unifiedCount == len(ids) {
 		return true
 	}
+	//println(unifiedCount, " ", len(ids))
 	for i := 0; i < len(ids); i++ {
 		id := ids[i]
 		if !tf.data[id].unified {
-			ss := make([]*ScalarQty, 0, unifiedCount)
-			for j := 0; j < len(ids); j++ {
-				if tf.data[ids[j]].unified {
-					ss = append(ss, &ScalarQty{X: tf.data[ids[j]].X, Y: tf.data[ids[j]].Y, V: tf.data[ids[j]].D1})
-				}
-			}
-			D1, _ := IDW(ss, tf.data[id].X, tf.data[id].Y, DefaultIDWPower)
-			if relErr(D1, tf.data[id].D1) > relErr(D1, tf.data[id].D2) {
+			d1, _ := IDW(ss, tf.data[id].X, tf.data[id].Y, DefaultIDWPower)
+			if relErr(d1, tf.data[id].D1) > relErr(d1, tf.data[id].D2) {
+				//println(id, " ", d1, " ", tf.data[id].D1, " ", tf.data[id].D2)
 				tf.data[id].swapEigen()
+				//println(id, " ", d1, " ", tf.data[id].D1, " ", tf.data[id].D2)
 			}
 			tf.data[id].unified = true
-			unifiedCount++
+			ss = append(ss, &ScalarQty{X: tf.data[id].X, Y: tf.data[id].Y, V: tf.data[id].D1})
 		}
 	}
 	return true
@@ -373,6 +409,11 @@ func ParseTensorData(input []byte) (tf *TensorField, err error) {
 	tf.grid = g
 	for i := 0; i < len(data); i++ {
 		tf.grid.Add(data[i].X, data[i].Y, i)
+	}
+	for i := 0; i < len(tf.data); i++ {
+		if i%1 == 0 {
+			fmt.Printf("%v\t%e\t%e\t%e\t%e\n", i, tf.data[i].D1, tf.data[i].D2, tf.data[i].V1, tf.data[i].V2)
+		}
 	}
 	return tf, nil
 }

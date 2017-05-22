@@ -80,9 +80,10 @@ func (t *Tensor) EigenVectors(e float64) (ev1, ev2 *vector.Vector, degen bool) {
 	return ev1, ev2, degen
 }
 
-// EigenValAng 计算张量矩阵的特征值和方向角, 其中 (e1, a1) 和 (e2, a2) 分别是张量的
-// 两个特征向量的特征值和方向角, 他们亮亮对应. 总有 e1 >= e2. 若 e1 == e2, 则该
-// 张量退化, 这时 degen 为 true, 且 a1, a2 可以为任意值; 否则 degen 为 false.
+// EigenValAng 计算张量矩阵的特征值和方向角, 其中 (v1, a1) 和 (v2, a2) 分别是张量的
+// 两个特征向量的特征值和方向角, 他们两两对应. 返回的特征值总有 v1 >= v2. a1, a2 的
+// 变化区间为 [-PI/4, 3*PI/4]. 若 v1 == v2, 则该张量退化, 这时 degen 为 true, 且 a1,
+// a2 可以为任意值; 否则 degen 为 false.
 func (t *Tensor) EigenValAng() (v1, v2, a1, a2 float64, degen bool) {
 	a := (t.XX + t.YY) * 0.5
 	b := (t.XX - t.YY) * 0.5
@@ -90,30 +91,36 @@ func (t *Tensor) EigenValAng() (v1, v2, a1, a2 float64, degen bool) {
 	v1 = a + b
 	v2 = a - b
 	if arith.Equal(v1, v2) {
+		// 这里返回的方向角是随意选取的, 为了保持一致性, 使他们相差 PI/2
 		return v1, v2, 0.25 * math.Pi, 0.75 * math.Pi, true
 	}
 	if arith.Equal(t.XX, t.YY) {
-		a1 = 0.0
-		a2 = 0.5 * math.Pi
+		if t.XY > 0 {
+			a1 = -0.25 * math.Pi
+			a2 = -a1
+		} else {
+			a1 = 0.25 * math.Pi
+			a2 = -a1
+		}
+		// 前面已经判断过退化的情况了, 这里不用再判断
+		return v1, v2, a1, v2, false
 	}
-	a1 = 0.5 * math.Atan(2.0*t.XY/(t.XX-t.YY))
-	// 保证 0 <= a1 < a2 < PI
-	if a1 < 0 {
-		a1 += 0.5 * math.Pi   // 锐角
-		a2 = a1 + 0.5*math.Pi //钝角
-	} else {
-		a2 = a1 + 0.5*math.Pi //钝角
-	}
+	a1 = 0.5 * math.Atan(2.0*t.XY/(t.XX-t.YY)) // 必有 -PI/4 < a1 < PI/4
+	a2 = a1 + 0.5*math.Pi                      // 必有 PI/4 < a2 < 3*PI/4
 	if t.XX < t.YY {
+		//v1, v2 = v2, v1
 		a1, a2 = a2, a1
 	}
+	//if a1 < 0.0 {
+	//	a1 += math.Pi
+	//}
 	return v1, v2, a1, a2, false
 }
 
-// EigenValDeriv 计算张量矩阵的特征值和方向角正切(函数导数, 曲线斜率), 其中 (e1, a1)
-// 和 (e2, a2) 分别是张量的两个特征向量的特征值和方向角, 他们亮亮对应. 总有
-// e1 >= e2. 若 e1 == e2, 则该张量退化, 这时 degen 为 true, 且 a1, a2 可以为任
-// 意值; 否则 degen 为 false. d1 和 d2 的值可能为无穷大.
+// EigenValDeriv 计算张量矩阵的特征值和方向角正切(函数导数, 曲线斜率), 其中 (v1, a1)
+// 和 (v2, a2) 分别是张量的两个特征向量的特征值和方向角, 他们两两对应. 总有
+// v1 >= v2. 若 v1 = v2, 则该张量退化, 这时 degen 为 true, 且 d1, d2 可以为任
+// 意值; 否则 degen 为 false.
 func (t *Tensor) EigenValDeriv() (v1, v2, d1, d2 float64, degen bool) {
 	v1, v2, d1, d2, degen = t.EigenValAng()
 	d1 = math.Tan(d1)
