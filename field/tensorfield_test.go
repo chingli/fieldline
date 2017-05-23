@@ -9,7 +9,7 @@ import (
 )
 
 func TestParseTensorData(t *testing.T) {
-	file, err := os.Open("fielddata/stress.dat")
+	file, err := os.Open("../fielddata/stress.dat")
 	defer file.Close()
 	if err != nil {
 		t.Error("file not existing")

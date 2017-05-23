@@ -1,13 +1,15 @@
-package field
+package interp
 
 import (
 	"errors"
 	"math"
+
+	"stj/fieldline/quantity"
 )
 
 var DefaultIDWPower float64 = 2.0
 
-func IDW(ss []*ScalarQty, x, y, power float64) (val float64, err error) {
+func IDW(ss []*quantity.ScalarQty, x, y, power float64) (val float64, err error) {
 	if len(ss) == 0 {
 		return 0.0, errors.New("the length of scalar quantity slice should not be zero")
 	}

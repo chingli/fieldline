@@ -1,5 +1,5 @@
 /*
-rkf45 包实现了 4 阶/5 阶嵌入对 Runge-Kutta-Fehlberg 积分.
+ode 包实现了 4 阶/5 阶嵌入对 Runge-Kutta-Fehlberg 积分.
 
 参数:
 x0: 自变量初值.
@@ -12,7 +12,7 @@ ODE: 计算微分的函数.
 
 关于该包的使用可参见相应的测试文件.
 */
-package rkf45
+package ode
 
 import (
 	"math"

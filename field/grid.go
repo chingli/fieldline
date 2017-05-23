@@ -18,6 +18,15 @@ var MaxPointNumPerCell int = 2
 // Cell 表示 Grid 网格的一个单元. 其中 IDs 中各个整型元素与另外一个一维数组的索引相对应.
 type Cell struct {
 	IDs []int
+	// HasDegen 在当一个单元中有一个或多个退化点(对于张量)或奇点(对于向量)时为 true,
+	// 若 FullDegenArea 或 PartialDegenArea 为 true, 则此值必定同时为 true.
+	HasDegen bool
+	// FullDegenArea 在当一个单元内所有区域的点都为退化点(对于张量)或奇点(对于向量)时为 true.
+	FullDegenArea bool
+	// PartialDegenArea 在当一个单元内只有部分连续区域的点为退化点(对于张量)或奇点(对于向量)区,
+	// 而其他区域为非退化点或奇点时为 true.
+	// 如果该值为 true, 则
+	PartialDegenArea bool
 }
 
 // Grid 定义了平面区域的一个规则网格. 该网格在 x 和 y 方向分别是等间距的.

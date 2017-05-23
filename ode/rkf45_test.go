@@ -1,11 +1,11 @@
-package rkf45_test
+package ode_test
 
 import (
 	"fmt"
 	"math"
 	"testing"
 
-	"stj/fieldline/rkf45"
+	"stj/fieldline/ode"
 )
 
 // Range 定义了常微分方程的求解范围.
@@ -57,7 +57,7 @@ func s2(x float64) (s1, s2 float64, ds bool) {
 }
 
 type eq struct {
-	d      rkf45.ODE
+	d      ode.ODE
 	s      Solution
 	x0, y0 float64
 }
@@ -73,13 +73,13 @@ func TestSolve(t *testing.T) {
 	for _, e := range eqs {
 		fmt.Printf("i\tx\t\ty\t\trealY\n")
 		fmt.Println("-------------------------------------------------------")
-		points, _ := rkf45.Solve(e.d, e.x0, e.y0, nMax)
+		points, _ := ode.Solve(e.d, e.x0, e.y0, nMax)
 		for i := 0; i < len(points); i++ {
 			rY1, rY2, ds := e.s(points[i].X)
 			var relErr1, relErr2 float64
-			relErr1 = math.Abs(points[i].Y-rY1) / math.Max(math.Abs(rY1), rkf45.Theta)
+			relErr1 = math.Abs(points[i].Y-rY1) / math.Max(math.Abs(rY1), ode.Theta)
 			if ds {
-				relErr2 = math.Abs(points[i].Y-rY2) / math.Max(math.Abs(rY2), rkf45.Theta)
+				relErr2 = math.Abs(points[i].Y-rY2) / math.Max(math.Abs(rY2), ode.Theta)
 			}
 
 			rY := rY1

@@ -19,7 +19,7 @@ type TensorQty struct {
 	tensor.Tensor
 	V1, V2  float64 // 特征值
 	D1, D2  float64 // 流线函数的导数(斜率)
-	degen   bool    //
+	Degen   bool    //
 	unified bool
 }
 
@@ -27,12 +27,12 @@ func NewTensorQty(x, y, xx, yy, xy float64) *TensorQty {
 	t := &TensorQty{}
 	t.X, t.Y = x, y
 	t.XX, t.YY, t.XY = xx, yy, xy
-	t.V1, t.V2, t.D1, t.D2, t.degen = t.EigenValDeriv()
+	t.V1, t.V2, t.D1, t.D2, t.Degen = t.EigenValDeriv()
 	return t
 }
 
-// swapEigen 方法将张量的两个特征值和两个流线函数的导数同时互换.
-func (t *TensorQty) swapEigen() {
+// SwapEigen 方法将张量的两个特征值和两个流线函数的导数同时互换.
+func (t *TensorQty) SwapEigen() {
 	t.V1, t.V2 = t.V2, t.V1
 	t.D1, t.D2 = t.D2, t.D1
 }
@@ -264,7 +264,7 @@ func (tf *TensorField) Unify() {
 	// 将第一个点的 unified 字段设为 true, 作为后续设置的引子(参照)
 	for idx := 0; idx < len(tf.grid.cells); idx++ {
 		if len(tf.grid.cells[idx].IDs) != 0 {
-			//tf.data[tf.grid.cells[idx].IDs[0]].swapEigen()
+			//tf.data[tf.grid.cells[idx].IDs[0]].SwapEigen()
 			tf.data[tf.grid.cells[idx].IDs[0]].unified = true
 			break
 		}
@@ -315,7 +315,7 @@ func (tf *TensorField) unify(ids []int) bool {
 			d1, _ := IDW(ss, tf.data[id].X, tf.data[id].Y, DefaultIDWPower)
 			if relErr(d1, tf.data[id].D1) > relErr(d1, tf.data[id].D2) {
 				//println(id, " ", d1, " ", tf.data[id].D1, " ", tf.data[id].D2)
-				tf.data[id].swapEigen()
+				tf.data[id].SwapEigen()
 				//println(id, " ", d1, " ", tf.data[id].D1, " ", tf.data[id].D2)
 			}
 			tf.data[id].unified = true
