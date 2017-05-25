@@ -216,6 +216,11 @@ func (tf *TensorField) Remove(t *TensorQty) error {
 	return nil
 }
 
+// FindDegen 方法搜索张量场, 并找出其中所有的退化点和蜕化区.
+func (tf *TensorField) FindDegen() (dps []DegenPoint, das []DegenArea) {
+	return nil, nil
+}
+
 // Nearest 方法返回点 (x, y) 所在的单元格中所有的点.
 func (tf *TensorField) Nearest(x, y float64) (ts []*TensorQty, err error) {
 	ids, err := tf.grid.Nearest(x, y)

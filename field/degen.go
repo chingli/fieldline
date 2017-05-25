@@ -8,11 +8,13 @@ type degenInfo struct {
 	Typo int
 }
 
-type Degen struct {
+// DegenPoint 代表张量场中的一个退化点.
+type DegenPoint struct {
 	degenInfo
-	X, Y float64
+	point geom.Point
 }
 
+// DegenArea 代表张量场中的一个退化区.
 type DegenArea struct {
 	degenInfo
 	Border []geom.Point
