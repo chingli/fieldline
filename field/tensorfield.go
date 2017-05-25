@@ -11,30 +11,31 @@ import (
 	"stj/fieldline/tensor"
 )
 
-// TensorQty 是张量场中一个数据点的所有信息. 其中张量的特征值 V1 和流线
-// 函数的导数 D1 总是相对应, 同样, V2 总是和 D2 对应. 虽然 V1, V2, D1, D2
-// 可由张量数据求得, 但为了加快运算, 这里事先将其求出并存储.
+// TensorQty 是张量场中一个数据点的所有信息. 其中 Val1 和 Slope1 是同一个特征
+// 向量的特征值和斜率, 同样, Val2 和 Slope2 是另外一个特征向量的特征值和斜率.
+// 虽然 Val1, Val2, Slope1, Slope2 可由张量数据求得, 但为了加快运算,
+// 这里事先将其求出并存储.
 type TensorQty struct {
 	PointQty
 	tensor.Tensor
-	V1, V2  float64 // 特征值
-	D1, D2  float64 // 流线函数的导数(斜率)
-	Degen   bool    //
-	unified bool
+	Val1, Val2     float64 // 特征值
+	Slope1, Slope2 float64 // 特征向量的斜率
+	Degen          bool    // 判断张量是否退化
+	unified        bool    // 判断该张量是否已进行过一致化处理, 该值只有在场中才有意义
 }
 
 func NewTensorQty(x, y, xx, yy, xy float64) *TensorQty {
 	t := &TensorQty{}
 	t.X, t.Y = x, y
 	t.XX, t.YY, t.XY = xx, yy, xy
-	t.V1, t.V2, t.D1, t.D2, t.Degen = t.EigenValDeriv()
+	t.Val1, t.Val2, t.Slope1, t.Slope2, t.Degen = t.EigenValSlope()
 	return t
 }
 
-// SwapEigen 方法将张量的两个特征值和两个流线函数的导数同时互换.
+// SwapEigen 方法将张量的两个特征值和两个特征向量斜率同时互换.
 func (t *TensorQty) SwapEigen() {
-	t.V1, t.V2 = t.V2, t.V1
-	t.D1, t.D2 = t.D2, t.D1
+	t.Val1, t.Val2 = t.Val2, t.Val1
+	t.Slope1, t.Slope2 = t.Slope2, t.Slope1
 }
 
 // TensorField 代表面区域内的一个张量场(其中的张量全部为实对称张量).
@@ -46,14 +47,14 @@ type TensorField struct {
 
 // Unified 判断张量场中各个特征值, 流线函数的导数是否已进行过一致性处理.
 // 即在同一超流线, 以及在不同超流线但同一族(超流线具有大致相同的走势)总
-// 是按相同的序列排列(V1, V2 以及 D1, D2).
+// 是按相同的序列排列(Val1, Val2 以及 Slope1, Slope2).
 func (tf *TensorField) Unified(t *TensorQty) bool {
 	return tf.unified
 }
 
 // Value 根据输入的场中任意点的坐标, 利用空间插值方法(多变量插值), 根据场中已知
-// 点获得该点的某个场量值. name 的值可以为 "xx", "yy", "xy", "v1", "v2", "d1",
-// "d2"(小写, 大写及大小写混合形式都行).
+// 点获得该点的某个场量值. name 的值可以为 "xx", "yy", "xy", "val1", "val2",
+// "slope1", "slope2"(小写, 大写及大小写混合形式都行).
 func (tf *TensorField) Value(x, y float64, name string) (v float64, err error) {
 	if !tf.unified {
 		return 0.0, errors.New("the tensor field has not been unified")
@@ -94,14 +95,14 @@ func (tf *TensorField) interp(ids []int, x, y float64, name string) (v float64, 
 			v = tf.data[ids[i]].YY
 		case "xy":
 			v = tf.data[ids[i]].XY
-		case "v1":
-			v = tf.data[ids[i]].V1
-		case "v2":
-			v = tf.data[ids[i]].V2
-		case "d1":
-			v = tf.data[ids[i]].D1
-		case "d2":
-			v = tf.data[ids[i]].D2
+		case "val1":
+			v = tf.data[ids[i]].Val1
+		case "val2":
+			v = tf.data[ids[i]].Val2
+		case "slope1":
+			v = tf.data[ids[i]].Slope1
+		case "slope2":
+			v = tf.data[ids[i]].Slope2
 		}
 		ss[i] = &ScalarQty{X: tf.data[ids[i]].X, Y: tf.data[ids[i]].Y, V: v}
 	}
@@ -123,24 +124,24 @@ func (tf *TensorField) XY(x, y float64) (v float64, err error) {
 	return tf.Value(x, y, "xy")
 }
 
-// V1 方法通过空间插值方法获得张量场内任意点 (x, y) 处的特征值 V1.
-func (tf *TensorField) V1(x, y float64) (v float64, err error) {
-	return tf.Value(x, y, "v1")
+// Val1 方法通过空间插值方法获得张量场内任意点 (x, y) 处的特征值 Val1.
+func (tf *TensorField) Val1(x, y float64) (v float64, err error) {
+	return tf.Value(x, y, "val1")
 }
 
-// V2 方法通过空间插值方法获得张量场内任意点 (x, y) 处的特征值 V2.
-func (tf *TensorField) V2(x, y float64) (v float64, err error) {
-	return tf.Value(x, y, "v2")
+// Val2 方法通过空间插值方法获得张量场内任意点 (x, y) 处的特征值 Val2.
+func (tf *TensorField) Val2(x, y float64) (v float64, err error) {
+	return tf.Value(x, y, "val2")
 }
 
-// D1 方法通过空间插值方法获得张量场内任意点 (x, y) 处的流线函数导数(特征向量斜率) D1.
-func (tf *TensorField) D1(x, y float64) (v float64, err error) {
-	return tf.Value(x, y, "d1")
+// Slope1 方法通过空间插值方法获得张量场内任意点 (x, y) 处的流线函数导数(特征向量斜率) Slope1.
+func (tf *TensorField) Slope1(x, y float64) (v float64, err error) {
+	return tf.Value(x, y, "slope1")
 }
 
-// D2 方法通过空间插值方法获得张量场内任意点 (x, y) 处的流线函数导数(特征向量斜率) D2.
-func (tf *TensorField) D2(x, y float64) (v float64, err error) {
-	return tf.Value(x, y, "d2")
+// Slope2 方法通过空间插值方法获得张量场内任意点 (x, y) 处的流线函数导数(特征向量斜率) Slope2.
+func (tf *TensorField) Slope2(x, y float64) (v float64, err error) {
+	return tf.Value(x, y, "slope2")
 }
 
 // Add 方法将一个张量点添加到张量场中. 如果点所处的位置超过张量场的范围,
@@ -299,7 +300,7 @@ func (tf *TensorField) unify(ids []int) bool {
 	ss := make([]*ScalarQty, 0, len(ids))
 	for i := 0; i < len(ids); i++ {
 		if tf.data[ids[i]].unified {
-			ss = append(ss, &ScalarQty{X: tf.data[ids[i]].X, Y: tf.data[ids[i]].Y, V: tf.data[ids[i]].D1})
+			ss = append(ss, &ScalarQty{X: tf.data[ids[i]].X, Y: tf.data[ids[i]].Y, V: tf.data[ids[i]].Slope1})
 			unifiedCount++
 		}
 	}
@@ -312,14 +313,14 @@ func (tf *TensorField) unify(ids []int) bool {
 	for i := 0; i < len(ids); i++ {
 		id := ids[i]
 		if !tf.data[id].unified {
-			d1, _ := IDW(ss, tf.data[id].X, tf.data[id].Y, DefaultIDWPower)
-			if relErr(d1, tf.data[id].D1) > relErr(d1, tf.data[id].D2) {
-				//println(id, " ", d1, " ", tf.data[id].D1, " ", tf.data[id].D2)
+			slope1, _ := IDW(ss, tf.data[id].X, tf.data[id].Y, DefaultIDWPower)
+			if relErr(slope1, tf.data[id].Slope1) > relErr(slope1, tf.data[id].Slope2) {
+				//println(id, " ", slope1, " ", tf.data[id].Slope1, " ", tf.data[id].Slope2)
 				tf.data[id].SwapEigen()
-				//println(id, " ", d1, " ", tf.data[id].D1, " ", tf.data[id].D2)
+				//println(id, " ", slope1, " ", tf.data[id].Slope1, " ", tf.data[id].Slope2)
 			}
 			tf.data[id].unified = true
-			ss = append(ss, &ScalarQty{X: tf.data[id].X, Y: tf.data[id].Y, V: tf.data[id].D1})
+			ss = append(ss, &ScalarQty{X: tf.data[id].X, Y: tf.data[id].Y, V: tf.data[id].Slope1})
 		}
 	}
 	return true
@@ -412,7 +413,7 @@ func ParseTensorData(input []byte) (tf *TensorField, err error) {
 	}
 	for i := 0; i < len(tf.data); i++ {
 		if i%1 == 0 {
-			fmt.Printf("%v\t%e\t%e\t%e\t%e\n", i, tf.data[i].D1, tf.data[i].D2, tf.data[i].V1, tf.data[i].V2)
+			fmt.Printf("%v\t%e\t%e\t%e\t%e\n", i, tf.data[i].Slope1, tf.data[i].Slope2, tf.data[i].Val1, tf.data[i].Val2)
 		}
 	}
 	return tf, nil

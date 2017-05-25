@@ -57,8 +57,8 @@ func (v *Vector) Unit() (*Vector, error) {
 	return &Vector{v.X / l, v.Y / l}, nil
 }
 
-// DirectionAngle 返回一个矢量的二个方向角, 即矢量分别与 x, y 轴的夹角.
-func (v *Vector) DirectionAngle() (alpha, beta float64, err error) {
+// Dir 返回一个矢量的二个方向角, 即矢量分别与 x, y 轴的夹角.
+func (v *Vector) Dir() (alpha, beta float64, err error) {
 	u, err := v.Unit()
 	if err != nil {
 		return 0, 0, err

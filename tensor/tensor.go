@@ -74,17 +74,17 @@ func (t *Tensor) String() string {
 // 大于 ev2. 当 degen = true 时, 表示张量在此退化, 这时有 |ev1| = |ev2|, 而其
 // 指向则失去意义.
 func (t *Tensor) EigenVectors(e float64) (ev1, ev2 *vector.Vector, degen bool) {
-	v1, v2, a1, a2, degen := t.EigenValAng()
+	v1, v2, a1, a2, degen := t.EigenValDir()
 	ev1 = vector.New(v1*math.Cos(a1), v1*math.Sin(a1))
 	ev2 = vector.New(v2*math.Cos(a2), v2*math.Sin(a2))
 	return ev1, ev2, degen
 }
 
-// EigenValAng 计算张量矩阵的特征值和方向角, 其中 (v1, a1) 和 (v2, a2) 分别是张量的
-// 两个特征向量的特征值和方向角, 他们两两对应. 返回的特征值总有 v1 >= v2. a1, a2 的
-// 变化区间为 [-PI/4, 3*PI/4]. 若 v1 == v2, 则该张量退化, 这时 degen 为 true, 且 a1,
-// a2 可以为任意值; 否则 degen 为 false.
-func (t *Tensor) EigenValAng() (v1, v2, a1, a2 float64, degen bool) {
+// EigenValDir 计算张量矩阵的特征值和方向角, 其中 (v1, d1) 和 (v2, d2) 分别是张量的
+// 两个特征向量的特征值和方向角, 他们两两对应. 返回的特征值总有 v1 >= v2. d1, d2 的
+// 变化区间为 [-PI/4, 3*PI/4]. 若 v1 == v2, 则该张量退化, 这时 degen 为 true, 且 d1,
+// d2 可以为任意值; 否则 degen 为 false.
+func (t *Tensor) EigenValDir() (v1, v2, d1, d2 float64, degen bool) {
 	a := (t.XX + t.YY) * 0.5
 	b := (t.XX - t.YY) * 0.5
 	b = math.Sqrt(b*b - t.XY*t.XY)
@@ -96,36 +96,36 @@ func (t *Tensor) EigenValAng() (v1, v2, a1, a2 float64, degen bool) {
 	}
 	if arith.Equal(t.XX, t.YY) {
 		if t.XY > 0 {
-			a1 = -0.25 * math.Pi
-			a2 = -a1
+			d1 = -0.25 * math.Pi
+			d2 = -d1
 		} else {
-			a1 = 0.25 * math.Pi
-			a2 = -a1
+			d1 = 0.25 * math.Pi
+			d2 = -d1
 		}
 		// 前面已经判断过退化的情况了, 这里不用再判断
-		return v1, v2, a1, v2, false
+		return v1, v2, d1, v2, false
 	}
-	a1 = 0.5 * math.Atan(2.0*t.XY/(t.XX-t.YY)) // 必有 -PI/4 < a1 < PI/4
-	a2 = a1 + 0.5*math.Pi                      // 必有 PI/4 < a2 < 3*PI/4
+	d1 = 0.5 * math.Atan(2.0*t.XY/(t.XX-t.YY)) // 必有 -PI/4 < d1 < PI/4
+	d2 = d1 + 0.5*math.Pi                      // 必有 PI/4 < d2 < 3*PI/4
 	if t.XX < t.YY {
 		//v1, v2 = v2, v1
-		a1, a2 = a2, a1
+		d1, d2 = d2, d1
 	}
-	//if a1 < 0.0 {
-	//	a1 += math.Pi
+	//if d1 < 0.0 {
+	//	d1 += math.Pi
 	//}
-	return v1, v2, a1, a2, false
+	return v1, v2, d1, d2, false
 }
 
-// EigenValDeriv 计算张量矩阵的特征值和方向角正切(函数导数, 曲线斜率), 其中 (v1, a1)
-// 和 (v2, a2) 分别是张量的两个特征向量的特征值和方向角, 他们两两对应. 总有
-// v1 >= v2. 若 v1 = v2, 则该张量退化, 这时 degen 为 true, 且 d1, d2 可以为任
+// EigenValSlope 计算张量矩阵的特征值和方向角正切(函数导数, 曲线斜率), 其中 (v1, s1)
+// 和 (v2, s2) 分别是张量的两个特征向量的特征值和方向角, 他们两两对应. 总有
+// v1 >= v2. 若 v1 = v2, 则该张量退化, 这时 degen 为 true, 且 s1, s2 可以为任
 // 意值; 否则 degen 为 false.
-func (t *Tensor) EigenValDeriv() (v1, v2, d1, d2 float64, degen bool) {
-	v1, v2, d1, d2, degen = t.EigenValAng()
-	d1 = math.Tan(d1)
-	d2 = math.Tan(d2)
-	return v1, v2, d1, d2, degen
+func (t *Tensor) EigenValSlope() (v1, v2, s1, s2 float64, degen bool) {
+	v1, v2, s1, s2, degen = t.EigenValDir()
+	s1 = math.Tan(s1)
+	s2 = math.Tan(s2)
+	return v1, v2, s1, s2, degen
 }
 
 // TransMatrix 定义了一个简单的张量变换矩阵.
