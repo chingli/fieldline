@@ -216,7 +216,7 @@ func (tf *TensorField) Remove(t *TensorQty) error {
 	return nil
 }
 
-// FindDegen 方法搜索张量场, 并找出其中所有的退化点和蜕化区.
+// FindDegen 方法搜索张量场, 并找出其中所有的退化点和退化区.
 func (tf *TensorField) FindDegen() (dps []DegenPoint, das []DegenArea) {
 	return nil, nil
 }
