@@ -1,7 +1,7 @@
 package place
 
 import (
-	"stj/fieldline/arith"
+	"stj/fieldline/float"
 	"stj/fieldline/field"
 	"stj/fieldline/interp"
 )
@@ -17,7 +17,7 @@ func (l *Streamline) Looped() bool {
 	if n < 4 {
 		return false
 	}
-	if arith.Equal(l.VectorQties[0].X, l.VectorQties[n-1].X) && arith.Equal(l.VectorQties[0].Y, l.VectorQties[n-1].Y) {
+	if float.Equal(l.VectorQties[0].X, l.VectorQties[n-1].X) && float.Equal(l.VectorQties[0].Y, l.VectorQties[n-1].Y) {
 		return true
 	}
 	return false

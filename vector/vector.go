@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"math"
 
-	"stj/fieldline/arith"
+	"stj/fieldline/float"
 )
 
 // Vector 是二维笛卡尔坐标系下的二维矢量.
@@ -70,7 +70,7 @@ func (v *Vector) Dir() (alpha, beta float64, err error) {
 
 // IsUnit 判断矢量是否为单位矢量.
 func (v *Vector) IsUnit() bool {
-	if arith.Equal(v.Norm(), 1.0) {
+	if float.Equal(v.Norm(), 1.0) {
 		return true
 	}
 	return false
@@ -78,7 +78,7 @@ func (v *Vector) IsUnit() bool {
 
 // IsZero 判断一个矢量是否为零矢量.
 func (v *Vector) IsZero() bool {
-	if arith.Equal(v.X, 0.0) && arith.Equal(v.Y, 0.0) {
+	if float.Equal(v.X, 0.0) && float.Equal(v.Y, 0.0) {
 		return true
 	}
 	return false

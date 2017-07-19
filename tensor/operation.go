@@ -1,10 +1,10 @@
 package tensor
 
-import "stj/fieldline/arith"
+import "stj/fieldline/float"
 
 // Equal 判断两张量是否相等, 若相等, 则返回 True.
 func Equal(t1, t2 *Tensor) bool {
-	return arith.Equal(t1.XX, t2.XX) && arith.Equal(t1.YY, t2.YY) && arith.Equal(t1.XY, t2.XY)
+	return float.Equal(t1.XX, t2.XX) && float.Equal(t1.YY, t2.YY) && float.Equal(t1.XY, t2.XY)
 }
 
 // Add 实现了任意数量的张量相加.

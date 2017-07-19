@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"stj/fieldline/arith"
+	"stj/fieldline/float"
 	"stj/fieldline/vector"
 )
 
@@ -24,7 +24,7 @@ func Zero() *Tensor {
 }
 
 func (t *Tensor) IsZero() bool {
-	if arith.Equal(math.Abs(t.XX)+math.Abs(t.YY)+math.Abs(t.XY), 0.0) {
+	if float.Equal(math.Abs(t.XX)+math.Abs(t.YY)+math.Abs(t.XY), 0.0) {
 		return true
 	}
 	return false
@@ -90,11 +90,11 @@ func (t *Tensor) EigenValDir() (v1, v2, d1, d2 float64, degen bool) {
 	b = math.Sqrt(b*b - t.XY*t.XY)
 	v1 = a + b
 	v2 = a - b
-	if arith.Equal(v1, v2) {
+	if float.Equal(v1, v2) {
 		// 这里返回的方向角是随意选取的, 为了保持一致性, 使他们相差 PI/2
 		return v1, v2, 0.25 * math.Pi, 0.75 * math.Pi, true
 	}
-	if arith.Equal(t.XX, t.YY) {
+	if float.Equal(t.XX, t.YY) {
 		if t.XY > 0 {
 			d1 = -0.25 * math.Pi
 			d2 = -d1

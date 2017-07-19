@@ -1,5 +1,5 @@
-// arith 包及其下一级包给出了数值计算所常用的数据定义和方法.
-package arith
+// float 包及其下一级包给出了数值计算所常用的数据定义和方法.
+package float
 
 import (
 	"math"

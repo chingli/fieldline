@@ -4,12 +4,12 @@ import (
 	"errors"
 	"math"
 
-	"stj/fieldline/arith"
+	"stj/fieldline/float"
 )
 
 // Equal 判断两矢量是否相等. 若相等, 则返回 true; 否则返回 false.
 func Equal(a, b *Vector) bool {
-	return arith.Equal(a.X, b.X) && arith.Equal(a.Y, b.Y)
+	return float.Equal(a.X, b.X) && float.Equal(a.Y, b.Y)
 }
 
 // Add 将接受的任意数目的矢量相加, 返回一个新的矢量.
@@ -39,7 +39,7 @@ func Dot(a, b *Vector) float64 {
 
 // Parallel 判断两矢量是否平行. 零矢量和任何矢量平行.
 func Parallel(a, b *Vector) bool {
-	return arith.Equal(a.X/b.X, a.Y/b.Y)
+	return float.Equal(a.X/b.X, a.Y/b.Y)
 }
 
 // Cos 计算两个非零矢量的夹角余弦.

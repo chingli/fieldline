@@ -6,7 +6,7 @@ import (
 	"math"
 	"strings"
 
-	"stj/fieldline/arith"
+	"stj/fieldline/float"
 	"stj/fieldline/geom"
 	"stj/fieldline/tensor"
 )
@@ -186,7 +186,7 @@ func (tf *TensorField) Find(x, y float64) (id int) {
 	}
 	for i := 0; i < len(cell.IDs); i++ {
 		id := cell.IDs[i]
-		if arith.Equal(tf.data[id].X, x) && arith.Equal(tf.data[id].Y, y) {
+		if float.Equal(tf.data[id].X, x) && float.Equal(tf.data[id].Y, y) {
 			return id
 		}
 	}
@@ -203,7 +203,7 @@ func (tf *TensorField) Remove(t *TensorQty) error {
 	found := false
 	for i := 0; i < len(cell.IDs); i++ {
 		id := cell.IDs[i]
-		if arith.Equal(tf.data[id].X, t.X) && arith.Equal(tf.data[id].Y, t.Y) {
+		if float.Equal(tf.data[id].X, t.X) && float.Equal(tf.data[id].Y, t.Y) {
 			tf.data = append(tf.data[:id], tf.data[id+1:]...)
 			cell.IDs = append(cell.IDs[:i], cell.IDs[i+1:]...)
 			found = true
@@ -333,7 +333,7 @@ func (tf *TensorField) unify(ids []int) bool {
 
 // relErr 计算 x1, x2 之间的相对误差.
 func relErr(x1, x2 float64) float64 {
-	if arith.Equal(x1, 0.0) && arith.Equal(x2, 0.0) {
+	if float.Equal(x1, 0.0) && float.Equal(x2, 0.0) {
 		return 0.0
 	}
 	return math.Abs(x1-x2) / math.Max(math.Abs(x1), math.Abs(x2))
@@ -364,7 +364,7 @@ func ParseTensorData(input []byte) (tf *TensorField, err error) {
 		}
 		floats = parseLineData(line)
 		if len(floats) == 5 { // 如果每行解析出的文本数不等于 5,, 则并不满足张量数据需求, 直接舍弃
-			zeroTensor := arith.Equal(floats[2], 0.0) && arith.Equal(floats[3], 0.0) && arith.Equal(floats[4], 0.0)
+			zeroTensor := float.Equal(floats[2], 0.0) && float.Equal(floats[3], 0.0) && float.Equal(floats[4], 0.0)
 			if !DiscardZeroQty || (DiscardZeroQty && !zeroTensor) {
 				data = append(data, NewTensorQty(floats[0], floats[1], floats[2], floats[3], floats[4]))
 			}

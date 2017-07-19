@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"math"
 
-	"stj/fieldline/arith"
+	"stj/fieldline/float"
 	"stj/fieldline/geom"
 )
 
@@ -87,7 +87,7 @@ func (g *Grid) YN() int {
 // pos 函数返回一个点在 Grid 内部的 cells 切片中的索引.
 // 如果所输入的坐标超出网格定义域, 或数据尚未赋值, 则返回的 err 不为 nil.
 func (g *Grid) pos(x, y float64) (row, col, idx int, err error) {
-	if arith.Equal(g.xspan, 0.0) || arith.Equal(g.yspan, 0.0) {
+	if float.Equal(g.xspan, 0.0) || float.Equal(g.yspan, 0.0) {
 		err = errors.New("the Grid has not been initialized, you should initialize with NewGrid() func firstly")
 		return -1, -1, -1, err
 	}

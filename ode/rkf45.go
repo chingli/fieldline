@@ -17,7 +17,7 @@ package ode
 import (
 	"math"
 
-	"stj/fieldline/arith"
+	"stj/fieldline/float"
 	"stj/fieldline/geom"
 )
 
@@ -64,7 +64,7 @@ func rf(f ODE) ODE {
 		if err != nil {
 			return 0.0, err
 		}
-		if arith.Equal(deriv, 0.0) {
+		if float.Equal(deriv, 0.0) {
 			return math.Inf(1), nil
 		}
 		return 1.0 / deriv, nil
