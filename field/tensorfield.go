@@ -21,7 +21,7 @@ type TensorQty struct {
 	Val1, Val2     float64 // 特征值
 	Slope1, Slope2 float64 // 特征向量的斜率
 	Degen          bool    // 判断张量是否退化
-	unified        bool    // 判断该张量是否已进行过一致化处理, 该值只有在场中才有意义
+	aligned        bool    // 判断该张量是否已进行过对齐处理, 该值只有在场中才有意义
 }
 
 func NewTensorQty(x, y, xx, yy, xy float64) *TensorQty {
@@ -42,22 +42,22 @@ func (t *TensorQty) SwapEigen() {
 type TensorField struct {
 	baseField
 	data    []*TensorQty
-	unified bool
+	aligned bool
 }
 
-// Unified 判断张量场中各个特征值, 流线函数的导数是否已进行过一致性处理.
+// Aligned 判断张量场中各个特征值, 流线函数的导数是否已进行过对齐处理.
 // 即在同一超流线, 以及在不同超流线但同一族(超流线具有大致相同的走势)总
 // 是按相同的序列排列(Val1, Val2 以及 Slope1, Slope2).
-func (tf *TensorField) Unified(t *TensorQty) bool {
-	return tf.unified
+func (tf *TensorField) Aligned(t *TensorQty) bool {
+	return tf.aligned
 }
 
 // Value 根据输入的场中任意点的坐标, 利用空间插值方法(多变量插值), 根据场中已知
 // 点获得该点的某个场量值. name 的值可以为 "xx", "yy", "xy", "val1", "val2",
 // "slope1", "slope2"(小写, 大写及大小写混合形式都行).
 func (tf *TensorField) Value(x, y float64, name string) (v float64, err error) {
-	if !tf.unified {
-		return 0.0, errors.New("the tensor field has not been unified")
+	if !tf.aligned {
+		return 0.0, errors.New("the tensor field has not been aligned")
 	}
 	if len(tf.data) == 0 {
 		return 0.0, errors.New("no point existing in tensor field")
@@ -147,7 +147,7 @@ func (tf *TensorField) Slope2(x, y float64) (v float64, err error) {
 // Add 方法将一个张量点添加到张量场中. 如果点所处的位置超过张量场的范围,
 // 将返回一个错误. 该方法并不检测场中是否已经存在相同的点, 因此若将相同
 // 的点多次 Add 到场中, 则场中就可能存在重复的点. 如果插入之前张量场已进
-// 行过一致化处理, 则在插入之后, 同样对该点进行一致化处理.
+// 行过对齐处理, 则在插入之后, 同样对该点进行对齐处理.
 func (tf *TensorField) Add(t *TensorQty) error {
 	if t == nil {
 		return errors.New("the input TensorQty is nil")
@@ -157,7 +157,7 @@ func (tf *TensorField) Add(t *TensorQty) error {
 		return err
 	}
 	tf.data = append(tf.data, t)
-	if tf.unified {
+	if tf.aligned {
 		r, c, idx, _ := tf.grid.pos(t.X, t.Y)
 		for layers := 1; ; layers++ {
 			cells := tf.grid.nearCells(r, c, idx, layers)
@@ -165,13 +165,13 @@ func (tf *TensorField) Add(t *TensorQty) error {
 			for i := 0; i < len(cells); i++ {
 				ids = append(ids, cells[i].IDs...)
 			}
-			if tf.unify(ids) {
+			if tf.align(ids) {
 				break // 跳出循环, 不再搜索下一层
 			}
 		}
-	} else if len(tf.data) == 1 { // 若仅有一个节点, 则可以认为其中数据时一致的
-		tf.data[0].unified = true
-		tf.unified = true
+	} else if len(tf.data) == 1 { // 若仅有一个节点, 则可以认为其中数据时对齐的
+		tf.data[0].aligned = true
+		tf.aligned = true
 	}
 	return nil
 }
@@ -256,22 +256,22 @@ func (tf *TensorField) tensorQties(ids []int) []*TensorQty {
 	return ts
 }
 
-// Unify 对张量场进行一致性处理. 使同一族流线的对应的特征值和特征向量导数在
+// Align 对张量场进行对齐处理. 使同一族流线的对应的特征值和特征向量导数在
 // TensorQty 对象中具有相同的排列位置. 在对张量场中的特征值和特征向量方向进
-// 行插值之前, 一般需要先进行 Unify 处理.
-func (tf *TensorField) Unify() {
+// 行插值之前, 一般需要先进行 Align 处理.
+func (tf *TensorField) Align() {
 	if len(tf.data) <= 1 {
 		if len(tf.data) == 1 {
-			tf.data[0].unified = true
+			tf.data[0].aligned = true
 		}
-		tf.unified = true
+		tf.aligned = true
 		return
 	}
-	// 将第一个点的 unified 字段设为 true, 作为后续设置的引子(参照)
+	// 将第一个点的 aligned 字段设为 true, 作为后续设置的引子(参照)
 	for idx := 0; idx < len(tf.grid.cells); idx++ {
 		if len(tf.grid.cells[idx].IDs) != 0 {
 			//tf.data[tf.grid.cells[idx].IDs[0]].SwapEigen()
-			tf.data[tf.grid.cells[idx].IDs[0]].unified = true
+			tf.data[tf.grid.cells[idx].IDs[0]].aligned = true
 			break
 		}
 	}
@@ -286,25 +286,25 @@ func (tf *TensorField) Unify() {
 				for i := 0; i < len(cells); i++ {
 					ids = append(ids, cells[i].IDs...)
 				}
-				if tf.unify(ids) {
+				if tf.align(ids) {
 					break // 跳出循环, 不再搜索下一层
 				}
 			}
 		}
 	}
-	tf.unified = true
+	tf.aligned = true
 }
 
-// unify 对 ID 为 ids 的一系列张量点进行一致化操作. 只要这些点中有一个点的方向已
-// 确定(unified = true), 就可以进行一致化. 如果成功, 则返回 true; 否则返回 false.
-func (tf *TensorField) unify(ids []int) bool {
+// align 对 ID 为 ids 的一系列张量点进行对齐操作. 只要这些点中有一个点的方向已
+// 确定(aligned = true), 就可以进行对齐. 如果成功, 则返回 true; 否则返回 false.
+func (tf *TensorField) align(ids []int) bool {
 	if len(ids) <= 1 {
 		return false
 	}
 	unifiedCount := 0
 	ss := make([]*ScalarQty, 0, len(ids))
 	for i := 0; i < len(ids); i++ {
-		if tf.data[ids[i]].unified {
+		if tf.data[ids[i]].aligned {
 			ss = append(ss, &ScalarQty{X: tf.data[ids[i]].X, Y: tf.data[ids[i]].Y, V: tf.data[ids[i]].Slope1})
 			unifiedCount++
 		}
@@ -317,14 +317,14 @@ func (tf *TensorField) unify(ids []int) bool {
 	//println(unifiedCount, " ", len(ids))
 	for i := 0; i < len(ids); i++ {
 		id := ids[i]
-		if !tf.data[id].unified {
+		if !tf.data[id].aligned {
 			slope1, _ := IDW(ss, tf.data[id].X, tf.data[id].Y, DefaultIDWPower)
 			if relErr(slope1, tf.data[id].Slope1) > relErr(slope1, tf.data[id].Slope2) {
 				//println(id, " ", slope1, " ", tf.data[id].Slope1, " ", tf.data[id].Slope2)
 				tf.data[id].SwapEigen()
 				//println(id, " ", slope1, " ", tf.data[id].Slope1, " ", tf.data[id].Slope2)
 			}
-			tf.data[id].unified = true
+			tf.data[id].aligned = true
 			ss = append(ss, &ScalarQty{X: tf.data[id].X, Y: tf.data[id].Y, V: tf.data[id].Slope1})
 		}
 	}
