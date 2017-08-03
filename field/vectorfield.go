@@ -4,6 +4,7 @@ import (
 	"stj/fieldline/vector"
 )
 
+// VectorQty 结构体代表向量场中的一个向量.
 type VectorQty struct {
 	PointQty
 	Vector vector.Vector

@@ -37,7 +37,7 @@ func TestParseTensorData(t *testing.T) {
 		fmt.Printf("%v\t%v\t%e\t%e\t%e\n", t.X, t.Y, t.XX, t.YY, t.XY)
 	}
 	tf.Align()
-	d1, err := tf.Value(50.0, 50.0, "d1")
+	d1, err := tf.ES1(50.0, 50.0)
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {
