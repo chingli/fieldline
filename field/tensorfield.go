@@ -2,7 +2,6 @@ package field
 
 import (
 	"errors"
-	"fmt"
 	"math"
 
 	"stj/fieldline/float"
@@ -31,8 +30,8 @@ type TensorQty struct {
 	tensor.Tensor
 	EV1, EV2 float64 // 特征值
 	ES1, ES2 float64 // 特征向量的斜率
-	Degen    bool    // 判断张量是否退化
-	aligned  bool    // 判断该张量是否已进行过对齐处理, 该值只有在场中才有意义
+	Singular bool    // 判断张量是否退化
+	aligned  bool    // 判断该张量是否已进行过对齐处理
 }
 
 // NewTensorQty 函数根据给定值创建张量场中的一个张量.
@@ -40,7 +39,7 @@ func NewTensorQty(x, y, xx, yy, xy float64) *TensorQty {
 	t := &TensorQty{}
 	t.X, t.Y = x, y
 	t.XX, t.YY, t.XY = xx, yy, xy
-	t.EV1, t.EV2, t.ES1, t.ES2, t.Degen = t.EigenValSlope()
+	t.EV1, t.EV2, t.ES1, t.ES2, t.Singular = t.EigenValSlope()
 	return t
 }
 
@@ -53,9 +52,9 @@ func (t *TensorQty) SwapEigen() {
 // TensorField 代表面区域内的一个张量场(其中的张量全部为实对称张量).
 type TensorField struct {
 	baseField
-	data     []*TensorQty
-	vertexes []*TensorQty
-	aligned  bool
+	data    []*TensorQty
+	nodes   []*TensorQty
+	aligned bool
 }
 
 // Aligned 判断张量场中各个特征值, 流线函数的导数是否已进行过对齐处理.
@@ -63,34 +62,6 @@ type TensorField struct {
 // 是按相同的序列排列(EV1, EV2 以及 ES1, ES2).
 func (tf *TensorField) Aligned(t *TensorQty) bool {
 	return tf.aligned
-}
-
-// idwTensorQty 根据张量场中原始无规则离散分布的 data 数据,
-// 利反距离加权插值(IDW)方法获得任一点的张量场量.
-func (tf *TensorField) idwTensorQty(x, y float64) (tq *TensorQty, err error) {
-	if !tf.aligned {
-		return nil, errors.New("the tensor field has not been aligned")
-	}
-	if len(tf.data) == 0 {
-		return nil, errors.New("no point existing in tensor field")
-	}
-	if len(tf.data) == 1 { // 如果整个区域只有一个已知点, 那就直接进行插值
-		return tf.idwInterpTQ([]int{0}, x, y)
-	}
-
-	r, c, idx, _ := tf.grid.pos(x, y)
-	for layers := 1; ; layers++ {
-		cells := tf.grid.nearCells(r, c, idx, layers)
-		qtyIdxes := make([]int, 0, avgPointNumPerCell*len(cells))
-		for i := 0; i < len(cells); i++ {
-			qtyIdxes = append(qtyIdxes, cells[i].qtyIdxes...)
-		}
-		if len(qtyIdxes) >= 2 { // 至少有两个已知点才能进行插值
-			return tf.idwInterpTQ(qtyIdxes, x, y)
-		}
-		// 如果 len(qtyIdxes) = 1, 则加大一层 layers, 继续查找
-	}
-	//return nil, errors.New("somthing wrong") // 似乎永远执行不到这一步
 }
 
 /*
@@ -110,7 +81,7 @@ func (tf *TensorField) idwValue(x, y float64, compType int) (v float64, err erro
 	r, c, idx, _ := tf.grid.pos(x, y)
 	for layers := 1; ; layers++ {
 		cells := tf.grid.nearCells(r, c, idx, layers)
-		qtyIdxes := make([]int, 0, avgPointNumPerCell*len(cells))
+		qtyIdxes := make([]int, 0, AvgPointNumPerCell*len(cells))
 		for i := 0; i < len(cells); i++ {
 			qtyIdxes = append(qtyIdxes, cells[i].qtyIdxes...)
 		}
@@ -122,6 +93,50 @@ func (tf *TensorField) idwValue(x, y float64, compType int) (v float64, err erro
 	// return 0.0, errors.New("somthing wrong") // 似乎永远执行不到这一步
 }
 */
+
+// tensorQty 根据张量场中原始无规则离散分布的 data 数据, 利反距离加权插值(IDW)方法获得任一点的张量场量.
+func (tf *TensorField) tensorQty(x, y float64) (tq *TensorQty, err error) {
+	if !tf.aligned {
+		return nil, errors.New("the tensor field has not been aligned")
+	}
+	if len(tf.data) == 0 {
+		return nil, errors.New("no point existing in tensor field")
+	}
+	if len(tf.data) == 1 { // 如果整个区域只有一个已知点, 那就直接进行插值
+		return tf.idwInterpTenQty([]int{0}, x, y)
+	}
+
+	r, c, idx, _ := tf.grid.pos(x, y)
+	for layers := 1; ; layers++ {
+		cells := tf.grid.nearCells(r, c, idx, layers)
+		qtyIdxes := make([]int, 0, int(1.25*AvgPointNumPerCell*float64(len(cells))))
+		for i := 0; i < len(cells); i++ {
+			qtyIdxes = append(qtyIdxes, cells[i].qtyIdxes...)
+		}
+		if len(qtyIdxes) >= 2 { // 至少有两个已知点才能进行插值
+			return tf.idwInterpTenQty(qtyIdxes, x, y)
+		}
+		// 如果 len(qtyIdxes) = 1, 则加大一层 layers, 继续查找
+	}
+	//return nil, errors.New("somthing wrong") // 似乎永远执行不到这一步
+}
+
+// idwInterpTenQty 利用 idwInterp 进行插值, 并组合获得一个张量场量.
+func (tf *TensorField) idwInterpTenQty(qtyIdxes []int, x, y float64) (tq *TensorQty, err error) {
+	xx, err := tf.idwInterp(qtyIdxes, x, y, TXX)
+	if err != nil {
+		return nil, err
+	}
+	tq = &TensorQty{}
+	tq.XX = xx
+	tq.YY, _ = tf.idwInterp(qtyIdxes, x, y, TYY)
+	tq.XY, _ = tf.idwInterp(qtyIdxes, x, y, TXY)
+	tq.EV1, _ = tf.idwInterp(qtyIdxes, x, y, TEV1)
+	tq.EV2, _ = tf.idwInterp(qtyIdxes, x, y, TEV2)
+	tq.ES1, _ = tf.idwInterp(qtyIdxes, x, y, TES1)
+	tq.ES2, _ = tf.idwInterp(qtyIdxes, x, y, TES2)
+	return tq, nil
+}
 
 // idwInterp 利用 IDW 方法进行插值, 获得一个浮点数.
 func (tf *TensorField) idwInterp(qtyIdxes []int, x, y float64, compType int) (v float64, err error) {
@@ -149,37 +164,20 @@ func (tf *TensorField) idwInterp(qtyIdxes []int, x, y float64, compType int) (v 
 	return IDW(ss, x, y, DefaultIDWPower)
 }
 
-// idwInterpTQ 利用 idwInterp 进行插值, 并组合获得一个张量场量.
-func (tf *TensorField) idwInterpTQ(qtyIdxes []int, x, y float64) (tq *TensorQty, err error) {
-	xx, err := tf.idwInterp(qtyIdxes, x, y, TXX)
-	if err != nil {
-		return nil, err
-	}
-	tq = new(TensorQty)
-	tq.XX = xx
-	tq.YY, _ = tf.idwInterp(qtyIdxes, x, y, TYY)
-	tq.XY, _ = tf.idwInterp(qtyIdxes, x, y, TXY)
-	tq.EV1, _ = tf.idwInterp(qtyIdxes, x, y, TEV1)
-	tq.EV2, _ = tf.idwInterp(qtyIdxes, x, y, TEV2)
-	tq.ES1, _ = tf.idwInterp(qtyIdxes, x, y, TES1)
-	tq.ES2, _ = tf.idwInterp(qtyIdxes, x, y, TES2)
-	return tq, nil
-}
-
 // XX 方法通过空间插值方法获得张量场内任意点 (x, y) 处的 XX 值.
 func (tf *TensorField) XX(x, y float64) (v float64, err error) {
 	cell, err := tf.grid.Cell(x, y)
 	if err != nil {
 		return 0.0, err
 	}
-	vtx, err := tf.grid.vertexIdxes(x, y)
+	nodeIdxes, err := tf.grid.nodeIdxes(x, y)
 	if err != nil {
 		return 0.0, err
 	}
-	ll := tf.vertexes[vtx[0]].XX
-	ul := tf.vertexes[vtx[1]].XX
-	lu := tf.vertexes[vtx[2]].XX
-	uu := tf.vertexes[vtx[3]].XX
+	ll := tf.nodes[nodeIdxes[0]].XX
+	ul := tf.nodes[nodeIdxes[1]].XX
+	lu := tf.nodes[nodeIdxes[2]].XX
+	uu := tf.nodes[nodeIdxes[3]].XX
 	return cell.value(x, y, ll, ul, lu, uu), nil
 }
 
@@ -189,14 +187,14 @@ func (tf *TensorField) YY(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	vtx, err := tf.grid.vertexIdxes(x, y)
+	nodeIdxes, err := tf.grid.nodeIdxes(x, y)
 	if err != nil {
 		return 0.0, err
 	}
-	ll := tf.vertexes[vtx[0]].YY
-	ul := tf.vertexes[vtx[1]].YY
-	lu := tf.vertexes[vtx[2]].YY
-	uu := tf.vertexes[vtx[3]].YY
+	ll := tf.nodes[nodeIdxes[0]].YY
+	ul := tf.nodes[nodeIdxes[1]].YY
+	lu := tf.nodes[nodeIdxes[2]].YY
+	uu := tf.nodes[nodeIdxes[3]].YY
 	return cell.value(x, y, ll, ul, lu, uu), nil
 }
 
@@ -206,14 +204,14 @@ func (tf *TensorField) XY(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	vtx, err := tf.grid.vertexIdxes(x, y)
+	nodeIdxes, err := tf.grid.nodeIdxes(x, y)
 	if err != nil {
 		return 0.0, err
 	}
-	ll := tf.vertexes[vtx[0]].XY
-	ul := tf.vertexes[vtx[1]].XY
-	lu := tf.vertexes[vtx[2]].XY
-	uu := tf.vertexes[vtx[3]].XY
+	ll := tf.nodes[nodeIdxes[0]].XY
+	ul := tf.nodes[nodeIdxes[1]].XY
+	lu := tf.nodes[nodeIdxes[2]].XY
+	uu := tf.nodes[nodeIdxes[3]].XY
 	return cell.value(x, y, ll, ul, lu, uu), nil
 }
 
@@ -223,14 +221,14 @@ func (tf *TensorField) EV1(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	vtx, err := tf.grid.vertexIdxes(x, y)
+	nodeIdxes, err := tf.grid.nodeIdxes(x, y)
 	if err != nil {
 		return 0.0, err
 	}
-	ll := tf.vertexes[vtx[0]].EV1
-	ul := tf.vertexes[vtx[1]].EV1
-	lu := tf.vertexes[vtx[2]].EV1
-	uu := tf.vertexes[vtx[3]].EV1
+	ll := tf.nodes[nodeIdxes[0]].EV1
+	ul := tf.nodes[nodeIdxes[1]].EV1
+	lu := tf.nodes[nodeIdxes[2]].EV1
+	uu := tf.nodes[nodeIdxes[3]].EV1
 	return cell.value(x, y, ll, ul, lu, uu), nil
 }
 
@@ -240,14 +238,14 @@ func (tf *TensorField) EV2(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	vtx, err := tf.grid.vertexIdxes(x, y)
+	nodeIdxes, err := tf.grid.nodeIdxes(x, y)
 	if err != nil {
 		return 0.0, err
 	}
-	ll := tf.vertexes[vtx[0]].EV2
-	ul := tf.vertexes[vtx[1]].EV2
-	lu := tf.vertexes[vtx[2]].EV2
-	uu := tf.vertexes[vtx[3]].EV2
+	ll := tf.nodes[nodeIdxes[0]].EV2
+	ul := tf.nodes[nodeIdxes[1]].EV2
+	lu := tf.nodes[nodeIdxes[2]].EV2
+	uu := tf.nodes[nodeIdxes[3]].EV2
 	return cell.value(x, y, ll, ul, lu, uu), nil
 }
 
@@ -257,14 +255,14 @@ func (tf *TensorField) ES1(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	vtx, err := tf.grid.vertexIdxes(x, y)
+	nodeIdxes, err := tf.grid.nodeIdxes(x, y)
 	if err != nil {
 		return 0.0, err
 	}
-	ll := tf.vertexes[vtx[0]].ES1
-	ul := tf.vertexes[vtx[1]].ES1
-	lu := tf.vertexes[vtx[2]].ES1
-	uu := tf.vertexes[vtx[3]].ES1
+	ll := tf.nodes[nodeIdxes[0]].ES1
+	ul := tf.nodes[nodeIdxes[1]].ES1
+	lu := tf.nodes[nodeIdxes[2]].ES1
+	uu := tf.nodes[nodeIdxes[3]].ES1
 	return cell.value(x, y, ll, ul, lu, uu), nil
 }
 
@@ -274,17 +272,18 @@ func (tf *TensorField) ES2(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	vtx, err := tf.grid.vertexIdxes(x, y)
+	nodeIdxes, err := tf.grid.nodeIdxes(x, y)
 	if err != nil {
 		return 0.0, err
 	}
-	ll := tf.vertexes[vtx[0]].ES2
-	ul := tf.vertexes[vtx[1]].ES2
-	lu := tf.vertexes[vtx[2]].ES2
-	uu := tf.vertexes[vtx[3]].ES2
+	ll := tf.nodes[nodeIdxes[0]].ES2
+	ul := tf.nodes[nodeIdxes[1]].ES2
+	lu := tf.nodes[nodeIdxes[2]].ES2
+	uu := tf.nodes[nodeIdxes[3]].ES2
 	return cell.value(x, y, ll, ul, lu, uu), nil
 }
 
+/*
 // Add 方法将一个张量点添加到张量场中. 如果点所处的位置超过张量场的范围,
 // 将返回一个错误. 该方法并不检测场中是否已经存在相同的点, 因此若将相同
 // 的点多次 Add 到场中, 则场中就可能存在重复的点. 如果插入之前张量场已进
@@ -302,7 +301,7 @@ func (tf *TensorField) Add(t *TensorQty) error {
 		r, c, idx, _ := tf.grid.pos(t.X, t.Y)
 		for layers := 1; ; layers++ {
 			cells := tf.grid.nearCells(r, c, idx, layers)
-			qtyIdxes := make([]int, 0, avgPointNumPerCell*len(cells))
+			qtyIdxes := make([]int, 0, int(math.Ceil(AvgPointNumPerCell))*len(cells))
 			for i := 0; i < len(cells); i++ {
 				qtyIdxes = append(qtyIdxes, cells[i].qtyIdxes...)
 			}
@@ -356,6 +355,7 @@ func (tf *TensorField) Remove(t *TensorQty) error {
 	}
 	return nil
 }
+*/
 
 // FindSingularity 方法搜索张量场, 并找出其中所有的退化点和退化区.
 // TODO: 该功能尚未编写.
@@ -370,7 +370,7 @@ func (tf *TensorField) Nearest(x, y float64) (ts []*TensorQty, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return tf.tensorQties(qtyIdxes), nil
+	return tf.getTensorQties(qtyIdxes), nil
 }
 
 // Nearer 方法返回点 (x, y) 所在的单元格及其周围 4 个单元格中所有的点.
@@ -379,7 +379,7 @@ func (tf *TensorField) Nearer(x, y float64) (ts []*TensorQty, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return tf.tensorQties(qtyIdxes), nil
+	return tf.getTensorQties(qtyIdxes), nil
 }
 */
 
@@ -389,10 +389,11 @@ func (tf *TensorField) Near(x, y float64, layers int) (ts []*TensorQty, err erro
 	if err != nil {
 		return nil, err
 	}
-	return tf.tensorQties(qtyIdxes), nil
+	return tf.getTensorQties(qtyIdxes), nil
 }
 
-func (tf *TensorField) tensorQties(qtyIdxes []int) []*TensorQty {
+// getTensorQties 方法根据给定的张量场量索引返回一个张量场量列表.
+func (tf *TensorField) getTensorQties(qtyIdxes []int) []*TensorQty {
 	ts := make([]*TensorQty, len(qtyIdxes))
 	for i := 0; i < len(qtyIdxes); i++ {
 		ts[i] = tf.data[qtyIdxes[i]]
@@ -426,7 +427,7 @@ func (tf *TensorField) Align() {
 			// 直到在一次搜索时能找到 2 个及以上点为止
 			for layers := 1; ; layers++ {
 				cells := tf.grid.nearCells(r, c, idx, layers)
-				qtyIdxes := make([]int, 0, avgPointNumPerCell*len(cells))
+				qtyIdxes := make([]int, 0, int(1.25*AvgPointNumPerCell*float64(len(cells))))
 				for i := 0; i < len(cells); i++ {
 					qtyIdxes = append(qtyIdxes, cells[i].qtyIdxes...)
 				}
@@ -445,28 +446,25 @@ func (tf *TensorField) align(qtyIdxes []int) bool {
 	if len(qtyIdxes) <= 1 {
 		return false
 	}
-	unifiedCount := 0
+	alignedCount := 0
 	ss := make([]*ScalarQty, 0, len(qtyIdxes))
 	for i := 0; i < len(qtyIdxes); i++ {
 		if tf.data[qtyIdxes[i]].aligned {
 			ss = append(ss, &ScalarQty{X: tf.data[qtyIdxes[i]].X, Y: tf.data[qtyIdxes[i]].Y, V: tf.data[qtyIdxes[i]].ES1})
-			unifiedCount++
+			alignedCount++
 		}
 	}
-	if unifiedCount == 0 {
+	if alignedCount == 0 {
 		return false
-	} else if unifiedCount == len(qtyIdxes) {
+	} else if alignedCount == len(qtyIdxes) {
 		return true
 	}
-	//println(unifiedCount, " ", len(qtyIdxes))
 	for i := 0; i < len(qtyIdxes); i++ {
 		id := qtyIdxes[i]
 		if !tf.data[id].aligned {
 			ES1, _ := IDW(ss, tf.data[id].X, tf.data[id].Y, DefaultIDWPower)
 			if relErr(ES1, tf.data[id].ES1) > relErr(ES1, tf.data[id].ES2) {
-				//println(id, " ", ES1, " ", tf.data[id].ES1, " ", tf.data[id].ES2)
 				tf.data[id].SwapEigen()
-				//println(id, " ", ES1, " ", tf.data[id].ES1, " ", tf.data[id].ES2)
 			}
 			tf.data[id].aligned = true
 			ss = append(ss, &ScalarQty{X: tf.data[id].X, Y: tf.data[id].Y, V: tf.data[id].ES1})
@@ -475,26 +473,23 @@ func (tf *TensorField) align(qtyIdxes []int) bool {
 	return true
 }
 
-// computeVertexes 根据张量场中无规则离散分布的张量场量数据 data, 通过反距离加权插值方法,
-// 计算各个单元格顶点处的张量场量, 从而构建出可以进行双线性插值的张量场网格.
-func (tf *TensorField) computeVertexes() {
-	n := (tf.grid.xn + 1) * (tf.grid.yn + 1) // 顶点总数
-	tf.vertexes = make([]*TensorQty, n)
+// GenNodes 根据张量场中无规则离散分布的张量场量数据 data, 通过反距离加权插值方法,
+// 计算各个单元格节点处的张量场量, 从而构建出可以进行双线性插值的张量场网格.
+// 该方法必须在张量场已经执行过对齐(Align) 操作之后调用.
+func (tf *TensorField) GenNodes() (err error) {
+	n := (tf.grid.xn + 1) * (tf.grid.yn + 1) // 节点总数
+	tf.nodes = make([]*TensorQty, n)
 	for i := 0; i < n; i++ {
-		row := i / (tf.grid.xn + 1)
-		col := i % (tf.grid.xn + 1)
-		x := float64(col) * tf.grid.xspan
-		y := float64(row) * tf.grid.yspan
-		tf.vertexes[i], _ = tf.idwTensorQty(x, y)
+		xi := i % (tf.grid.xn + 1)
+		yi := i / (tf.grid.xn + 1)
+		x := float64(xi) * tf.grid.xspan
+		y := float64(yi) * tf.grid.yspan
+		tf.nodes[i], err = tf.tensorQty(x, y)
+		if err != nil {
+			return err
+		}
 	}
-}
-
-// relErr 计算 x1, x2 之间的相对误差.
-func relErr(x1, x2 float64) float64 {
-	if float.Equal(x1, 0.0) && float.Equal(x2, 0.0) {
-		return 0.0
-	}
-	return math.Abs(x1-x2) / math.Max(math.Abs(x1), math.Abs(x2))
+	return nil
 }
 
 // ParseTensorData 解析由数值模拟导出的张量场数据文本, 并生成一个 *TensorField.
@@ -562,9 +557,8 @@ func ParseTensorData(input []byte) (tf *TensorField, err error) {
 	tf.data = data
 	xl := xmax - xmin
 	yl := ymax - ymin
-	den := math.Sqrt(float64(len(data)) / (xl * yl))
-	xn := int(math.Ceil(xl * den))
-	yn := int(math.Ceil(yl * den))
+	xn := int(math.Ceil(math.Sqrt(float64(len(data)) * xl / (AvgPointNumPerCell * yl))))
+	yn := int(math.Ceil(math.Sqrt(float64(len(data)) * yl / (AvgPointNumPerCell * xl))))
 	r, _ := geom.NewRect(xmin, ymin, xmax, ymax)
 	g, err := NewGrid(*r, xn, yn)
 	if err != nil {
@@ -574,11 +568,13 @@ func ParseTensorData(input []byte) (tf *TensorField, err error) {
 	for i := 0; i < len(data); i++ {
 		tf.grid.Add(data[i].X, data[i].Y, i)
 	}
-	tf.computeVertexes()
-	for i := 0; i < len(tf.data); i++ {
-		if i%1 == 0 {
+	if err != nil {
+		panic(err.Error())
+	}
+	/* 	for i := 0; i < len(tf.data); i++ {
+		if i%100 == 0 {
 			fmt.Printf("%v\t%e\t%e\t%e\t%e\n", i, tf.data[i].ES1, tf.data[i].ES2, tf.data[i].EV1, tf.data[i].EV2)
 		}
-	}
+	} */
 	return tf, nil
 }

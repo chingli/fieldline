@@ -10,10 +10,9 @@ import (
 	"stj/fieldline/geom"
 )
 
-// avgPointNumPerCell 表示预测的每个 Cell 中可能物理量(点)的最大个数.
-// 在初始化 Grid 时, 该值将作为每个 Cell 中 qtyIdxes 切片的容量.
-// 通过合理设置该值, 可以避免在往单元格中追加数据时反复重建 qtyIdxes.
-var avgPointNumPerCell = 1
+// AvgPointNumPerCell 表示设定的每个 Cell 中包含物理量(点)的平均个数.
+// 在创建 Grid 时, 该值将影响网格的密度. 该值越小, 网格越密.
+var AvgPointNumPerCell = 0.5
 
 // Cell 表示 Grid 网格的一个单元格.
 type Cell struct {
@@ -35,7 +34,7 @@ type Cell struct {
 }
 
 // value 方法利用双线性插值的方法, 根据给定的值得到单元格内任一点的值.
-// ll, ul, lu, uu 分别是单元格四个顶点的标量值. ll, ul, lu, uu 中的第一个字母代表 x 方向的 lower
+// ll, ul, lu, uu 分别是单元格四个节点的标量值. ll, ul, lu, uu 中的第一个字母代表 x 方向的 lower
 // 或 upper, 第二个字母代表 y 方向的 lower 或 upper. 该方法并不对所求点是否在单元格内进行判断,
 // 当所求点不在单元格内时, 进行外插. 参考:
 // https://en.wikipedia.org/wiki/Bilinear_interpolation
@@ -46,23 +45,16 @@ func (c *Cell) value(x, y float64, ll, ul, lu, uu float64) float64 {
 	return v
 }
 
-// posInterp 进行位置插值. 它根据 x 轴上两点坐标 x1, x2 以及对应的两个值 v1, v2,
-// 利用线性插值方法, 计算当取值为 v 时的坐标 x.
-func posInterp(x1, x2, v1, v2, v float64) float64 {
-	return ((v1-v)*x2 + (v-v2)*x1) / (v2 - v1)
-}
-
 // Grid 定义了平面区域的一个规则网格. 该网格在 x 和 y 方向分别是等间距的.
-// 其中的 cells 以先行后列的方式存储了对其他平面数据(以一维数组存储)的索引值.
+// 其中的 cells 以行序的方式存储了对其他平面数据(以一维数组存储)的索引值.
 type Grid struct {
 	cells        []Cell
-	vertexes     []geom.Point
 	region       geom.Rect
 	xspan, yspan float64
 	xn, yn       int
 }
 
-// NewGrid 根据输入参数创建一个 Grid 结构体, 总是应该使用此方法创建此结构体.
+// NewGrid 根据输入参数创建一个 Grid 结构体, 总是应该使用此方法创建 Grid.
 // 通过此函数创建 Grid 后, 其中各个单元的数据还是空的, 将来需要进一步通过 Add
 // 方法往其中填充数据.
 func NewGrid(r geom.Rect, xn, yn int) (g *Grid, err error) {
@@ -78,36 +70,37 @@ func NewGrid(r geom.Rect, xn, yn int) (g *Grid, err error) {
 	n := g.xn * g.yn // 单元格的总个数
 	g.cells = make([]Cell, n)
 	for i := 0; i < n; i++ {
-		g.cells[i] = Cell{qtyIdxes: make([]int, 0, avgPointNumPerCell)}
-		row := i / g.xn
-		col := i % g.xn
-		g.cells[i].region.Xmin = float64(col) * g.xspan
+		g.cells[i] = Cell{qtyIdxes: make([]int, 0, int(math.Ceil(AvgPointNumPerCell)))}
+		xi := i % g.xn
+		yi := i / g.xn
+		g.cells[i].region.Xmin = float64(xi) * g.xspan
 		g.cells[i].region.Xmax = g.cells[i].region.Xmin + g.xspan
-		g.cells[i].region.Ymin = float64(row) * g.yspan
+		g.cells[i].region.Ymin = float64(yi) * g.yspan
 		g.cells[i].region.Ymax = g.cells[i].region.Ymin + g.yspan
 	}
 	return g, nil
 }
 
-// cellVertexIdxes 方法根据输入的单元格索引, 计算该单元格的四个顶点的索引.
-func (g *Grid) cellVertexIdxes(cellIdx int) []int {
-	row := cellIdx / g.xn
-	col := cellIdx % g.xn
+// cellNodeIdxes 方法根据输入的单元格索引, 计算该单元格的四个节点的索引.
+// 四个节点以先 x 后 y 的顺序排列.
+func (g *Grid) cellNodeIdxes(cellIdx int) []int {
+	xi := cellIdx % g.xn
+	yi := cellIdx / g.xn
 	idxes := make([]int, 4)
-	idxes[0] = row*(g.xn+1) + col
+	idxes[0] = yi*(g.xn+1) + xi
 	idxes[1] = idxes[0] + 1
 	idxes[2] = idxes[0] + g.xn + 1
 	idxes[3] = idxes[2] + 1
 	return idxes
 }
 
-// vertexIdxes 方法根据输入的坐标获得该坐标所在单元的四个顶点索引.
-func (g *Grid) vertexIdxes(x, y float64) ([]int, error) {
+// nodeIdxes 方法根据输入的坐标获得该坐标所在单元的四个节点索引.
+func (g *Grid) nodeIdxes(x, y float64) ([]int, error) {
 	_, _, cellIdx, err := g.pos(x, y)
 	if err != nil {
 		return nil, err
 	}
-	return g.cellVertexIdxes(cellIdx), nil
+	return g.cellNodeIdxes(cellIdx), nil
 }
 
 // Region 返回矩形网格的范围.
@@ -137,7 +130,7 @@ func (g *Grid) YN() int {
 
 // pos 函数返回一个点在 Grid 内部的 cells 切片中的位置信息.
 // 如果所输入的坐标超出网格定义域, 或数据尚未赋值, 则返回的 err 不为 nil.
-func (g *Grid) pos(x, y float64) (row, col, idx int, err error) {
+func (g *Grid) pos(x, y float64) (yi, xi, idx int, err error) {
 	if float.Equal(g.xspan, 0.0) || float.Equal(g.yspan, 0.0) {
 		err = errors.New("the Grid has not been initialized, you should initialize with NewGrid() func firstly")
 		return -1, -1, -1, err
@@ -146,16 +139,16 @@ func (g *Grid) pos(x, y float64) (row, col, idx int, err error) {
 		err = fmt.Errorf("the input point (%g, %g) is out of the Grid region", x, y)
 		return -1, -1, -1, err
 	}
-	row = int(math.Ceil((y-g.region.Ymin)/g.yspan)) - 1
-	col = int(math.Ceil((x-g.region.Xmin)/g.xspan)) - 1
-	if row < 0 { // 应对输入点正好在下边界的情况 (y == g.region.Ymin)
-		row = 0
+	yi = int(math.Ceil((y-g.region.Ymin)/g.yspan)) - 1
+	xi = int(math.Ceil((x-g.region.Xmin)/g.xspan)) - 1
+	if yi < 0 { // 应对输入点正好在下边界的情况 (y == g.region.Ymin)
+		yi = 0
 	}
-	if col < 0 { // 应对输入点正好在左边界的情况 (x == g.region.Xmin)
-		col = 0
+	if xi < 0 { // 应对输入点正好在左边界的情况 (x == g.region.Xmin)
+		xi = 0
 	}
-	idx = row*g.xn + col
-	return row, col, idx, nil
+	idx = yi*g.xn + xi
+	return yi, xi, idx, nil
 }
 
 // Cell 根据输入的 (x, y) 坐标得出该点所在的单元格.
@@ -184,17 +177,17 @@ func (g *Grid) Cell(x, y float64) (cell *Cell, err error) {
 // 3 2 2 2 2 2 3
 // 3 3 3 3 3 3 3
 func (g *Grid) NearCells(x, y float64, layers int) (cells []*Cell, err error) {
-	row, col, idx, err := g.pos(x, y)
+	yi, xi, idx, err := g.pos(x, y)
 	if err != nil {
 		return nil, err
 	}
-	return g.nearCells(row, col, idx, layers), nil
+	return g.nearCells(yi, xi, idx, layers), nil
 }
 
-// row, col, idx 必须是有效值.
-func (g *Grid) nearCells(row, col, idx, layers int) (cells []*Cell) {
-	x0 := float64(col)*g.xspan + g.region.Xmin
-	y0 := float64(row)*g.yspan + g.region.Ymin
+// yi, xi, idx 必须是有效值.
+func (g *Grid) nearCells(yi, xi, idx, layers int) (cells []*Cell) {
+	x0 := float64(xi)*g.xspan + g.region.Xmin
+	y0 := float64(yi)*g.yspan + g.region.Ymin
 	n := 2*layers + 1
 	cells = make([]*Cell, 0, n*n)
 	var cxmin, cymin, cxmax, cymax float64
@@ -224,7 +217,7 @@ func (g *Grid) nearCells(row, col, idx, layers int) (cells []*Cell) {
 // 回的单元格时, 即便同时返回的 err 不为 nil， 也要先判断各个单元格是否为 nil,
 // 仅当不为 nil 时, 该单元格才可用.
 func (g *Grid) Near5Cells(x, y float64) (cells []*Cell, err error) {
-	row, col, idx, err := g.pos(x, y)
+	yi, xi, idx, err := g.pos(x, y)
 	if err != nil {
 		return nil, err
 	}
@@ -233,16 +226,16 @@ func (g *Grid) Near5Cells(x, y float64) (cells []*Cell, err error) {
 	// 以下可能存在重复赋值的情况, 但这样做最直观.
 	var idxes [5]int
 	// 以下可能存在重复赋值的情况, 但这样做最直观.
-	if row == 0 {
+	if yi == 0 {
 		idxes[1] = -1
 	}
-	if row == g.yn-1 {
+	if yi == g.yn-1 {
 		idxes[4] = -1
 	}
-	if col == 0 {
+	if xi == 0 {
 		idxes[2] = -1
 	}
-	if col == g.xn-1 {
+	if xi == g.xn-1 {
 		idxes[3] = -1
 	}
 	if idxes[1] != -1 {
@@ -272,7 +265,9 @@ func (g *Grid) Add(x, y float64, id int) error {
 	return nil
 }
 
+/*
 // Remove 方法将一个点从 Grid 中删除. 如果该 Grid 中不存在此点, 将返回一个错误.
+// 参数 x, y 只需要和待删除的点在同一个单元格中, 而并不需要和待删除的点的坐标完全相同.
 func (g *Grid) Remove(x, y float64, id int) error {
 	cell, err := g.Cell(x, y)
 	if err != nil {
@@ -291,28 +286,29 @@ func (g *Grid) Remove(x, y float64, id int) error {
 	}
 	return nil
 }
+*/
 
+/*
 // Nearest 方法返回点 (x, y) 所在的单元格中所有的点.
 func (g *Grid) Nearest(x, y float64) (qtyIdxes []int, err error) {
 	cell, err := g.Cell(x, y)
 	if err != nil {
 		return nil, err
 	}
-	qtyIdxes = make([]int, 0, avgPointNumPerCell)
+	qtyIdxes = make([]int, 0, int(math.Ceil(AvgPointNumPerCell)))
 	for _, id := range cell.qtyIdxes {
 		qtyIdxes = append(qtyIdxes, id)
 	}
 	return qtyIdxes, nil
 }
 
-/*
 // Nearer 方法返回点 (x, y) 所在的单元格及其周围 4 个单元格中所有的点.
 func (g *Grid) Nearer(x, y float64) (qtyIdxes []int, err error) {
 	cells, err := g.Near5Cells(x, y)
 	if err != nil {
 		return nil, err
 	}
-	qtyIdxes = make([]int, 0, avgPointNumPerCell*9)
+	qtyIdxes = make([]int, 0, AvgPointNumPerCell*9)
 	for _, c := range cells {
 		if c != nil {
 			for _, id := range c.qtyIdxes {
@@ -330,7 +326,7 @@ func (g *Grid) Near(x, y float64, layers int) (qtyIdxes []int, err error) {
 	if err != nil {
 		return nil, err
 	}
-	qtyIdxes = make([]int, 0, avgPointNumPerCell*9)
+	qtyIdxes = make([]int, 0, int(math.Ceil(AvgPointNumPerCell)))
 	for _, c := range cells {
 		if c != nil {
 			for _, id := range c.qtyIdxes {
@@ -346,15 +342,15 @@ func (g *Grid) String() string {
 	var b bytes.Buffer
 	var idx int
 	var x0, y0, x1, y1 float64
-	for row := 0; row < g.yn; row++ {
-		for col := 0; col < g.xn; col++ {
-			fmt.Fprintf(&b, "(row: %d,\tcol: %d)\t\t", row, col)
-			x0 = float64(col)*g.xspan + g.region.Xmin
+	for yi := 0; yi < g.yn; yi++ {
+		for xi := 0; xi < g.xn; xi++ {
+			fmt.Fprintf(&b, "(yi: %d,\tcol: %d)\t\t", yi, xi)
+			x0 = float64(xi)*g.xspan + g.region.Xmin
 			x1 = x0 + g.xspan
-			y0 = float64(row)*g.yspan + g.region.Ymin
+			y0 = float64(yi)*g.yspan + g.region.Ymin
 			y1 = y0 + g.yspan
 			fmt.Fprintf(&b, "[x: %v ~ %v,\ty: %v ~ %v]\t", x0, x1, y0, y1)
-			idx = row*g.xn + col
+			idx = yi*g.xn + xi
 			for _, id := range g.cells[idx].qtyIdxes {
 				fmt.Fprintf(&b, "\t%d", id)
 			}

@@ -1,7 +1,10 @@
 package field
 
 import (
+	"math"
 	"strconv"
+
+	"stj/fieldline/float"
 )
 
 // parseLineData 对一行文本进行解析, 并返回其中包含的数字列表.
@@ -47,4 +50,18 @@ func isSepChar(c byte) bool {
 func isFloatChar(c byte) bool {
 	return (c >= '0' && c <= '9') || c == '+' ||
 		c == '-' || c == '.' || c == 'e' || c == 'E'
+}
+
+// relErr 计算 x1, x2 之间的相对误差.
+func relErr(x1, x2 float64) float64 {
+	if float.Equal(x1, 0.0) && float.Equal(x2, 0.0) {
+		return 0.0
+	}
+	return math.Abs(x1-x2) / math.Max(math.Abs(x1), math.Abs(x2))
+}
+
+// posInterp 是一个进行位置插值的辅助函数. 它根据 x 轴上两点坐标 x1, x2 以及对应的两个值 v1, v2,
+// 利用线性插值方法, 计算当取值为 v 时的坐标 x.
+func posInterp(x1, x2, v1, v2, v float64) float64 {
+	return ((v1-v)*x2 + (v-v2)*x1) / (v2 - v1)
 }
