@@ -206,54 +206,6 @@ func (g *Grid) nearCells(yi, xi, idx, layers int) (cells []*Cell) {
 	return cells
 }
 
-/*
-// Near5Cells 返回点 (x, y) 所在的单元格, 以及与该单元格紧邻的其他 4 个单元格.
-// 所返回的单元格的索引顺序如下(其中 0 为输入点所在单元格):
-//    4
-// 2  0  3
-//    1
-// 如果所给的点 (x, y) 不在 Grid 的定义域之内, 则返回的 err 不为 nil. 如果所给的点 (x, y)
-// 已经在最边界, 其上, 下, 左或右不存在单元格, 则该单元格的值为 nil. 因此, 在使用该方法返
-// 回的单元格时, 即便同时返回的 err 不为 nil， 也要先判断各个单元格是否为 nil,
-// 仅当不为 nil 时, 该单元格才可用.
-func (g *Grid) Near5Cells(x, y float64) (cells []*Cell, err error) {
-	yi, xi, idx, err := g.pos(x, y)
-	if err != nil {
-		return nil, err
-	}
-	cells = make([]*Cell, 5)
-	cells[0] = &(g.cells[idx])
-	// 以下可能存在重复赋值的情况, 但这样做最直观.
-	var idxes [5]int
-	// 以下可能存在重复赋值的情况, 但这样做最直观.
-	if yi == 0 {
-		idxes[1] = -1
-	}
-	if yi == g.yn-1 {
-		idxes[4] = -1
-	}
-	if xi == 0 {
-		idxes[2] = -1
-	}
-	if xi == g.xn-1 {
-		idxes[3] = -1
-	}
-	if idxes[1] != -1 {
-		cells[1] = &(g.cells[idx-g.xn])
-	}
-	if idxes[2] != -1 {
-		cells[2] = &(g.cells[idx-1])
-	}
-	if idxes[3] != -1 {
-		cells[3] = &(g.cells[idx+1])
-	}
-	if idxes[4] != -1 {
-		cells[4] = &(g.cells[idx+g.xn])
-	}
-	return cells, nil
-}
-*/
-
 // Add 方法将一个点的索引添加到 Grid 中. 如果点所处的位置超过 Grid 的范围,
 // 将返回一个错误.
 func (g *Grid) Add(x, y float64, id int) error {
@@ -264,61 +216,6 @@ func (g *Grid) Add(x, y float64, id int) error {
 	cell.qtyIdxes = append(cell.qtyIdxes, id)
 	return nil
 }
-
-/*
-// Remove 方法将一个点从 Grid 中删除. 如果该 Grid 中不存在此点, 将返回一个错误.
-// 参数 x, y 只需要和待删除的点在同一个单元格中, 而并不需要和待删除的点的坐标完全相同.
-func (g *Grid) Remove(x, y float64, id int) error {
-	cell, err := g.Cell(x, y)
-	if err != nil {
-		return err
-	}
-	found := false
-	for i := 0; i < len(cell.qtyIdxes); i++ {
-		if cell.qtyIdxes[i] == id {
-			cell.qtyIdxes = append(cell.qtyIdxes[:i], cell.qtyIdxes[i+1:]...)
-			found = true
-			break
-		}
-	}
-	if !found {
-		return errors.New("no quantity found in Grid to remove")
-	}
-	return nil
-}
-*/
-
-/*
-// Nearest 方法返回点 (x, y) 所在的单元格中所有的点.
-func (g *Grid) Nearest(x, y float64) (qtyIdxes []int, err error) {
-	cell, err := g.Cell(x, y)
-	if err != nil {
-		return nil, err
-	}
-	qtyIdxes = make([]int, 0, int(math.Ceil(AvgPointNumPerCell)))
-	for _, id := range cell.qtyIdxes {
-		qtyIdxes = append(qtyIdxes, id)
-	}
-	return qtyIdxes, nil
-}
-
-// Nearer 方法返回点 (x, y) 所在的单元格及其周围 4 个单元格中所有的点.
-func (g *Grid) Nearer(x, y float64) (qtyIdxes []int, err error) {
-	cells, err := g.Near5Cells(x, y)
-	if err != nil {
-		return nil, err
-	}
-	qtyIdxes = make([]int, 0, AvgPointNumPerCell*9)
-	for _, c := range cells {
-		if c != nil {
-			for _, id := range c.qtyIdxes {
-				qtyIdxes = append(qtyIdxes, id)
-			}
-		}
-	}
-	return qtyIdxes, nil
-}
-*/
 
 // Near 方法返回点 (x, y) 所在的单元格, 以及与该单元格紧邻的其他 layers 层单元格所包含的所有场量索引.
 func (g *Grid) Near(x, y float64, layers int) (qtyIdxes []int, err error) {
