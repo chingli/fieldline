@@ -3,10 +3,12 @@ package field
 import (
 	"errors"
 	"math"
+
+	"stj/fieldline/float"
 )
 
 // DefaultIDWPower 为 IDW() 函数默认使用的幂参数. 当其他函数调用 IDW() 时, 可将该值传给 IDW().
-var DefaultIDWPower = 2.0
+var DefaultIDWPower = 3.0
 
 // IDW 函数实现了实现了多元差值算法中的一种: 反距离加权插值(Inverse Distance Weighted).
 // 其中 ScalarQty 是标量场中的量, x, y 是要差值的点坐标, power 是插值的幂参数.
@@ -20,10 +22,17 @@ func IDW(ss []*ScalarQty, x, y, power float64) (val float64, err error) {
 	}
 	var a, b float64
 	for i := 0; i < len(ss); i++ {
-		w := 1.0 / math.Pow(math.Sqrt(math.Pow((x-ss[i].X), 2.0)+math.Pow((y-ss[i].Y), 2.0)), power)
+		d := math.Sqrt(math.Pow((x-ss[i].X), 2.0) + math.Pow((y-ss[i].Y), 2.0))
+		if float.Equal(d, 0.0) {
+			return ss[i].V, nil
+		}
+		w := 1.0 / math.Pow(d, power)
 		a += ss[i].V * w
 		b += w
 	}
 	val = a / b
+	if math.IsNaN(val) {
+		println(a, b, val)
+	}
 	return val, nil
 }

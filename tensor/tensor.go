@@ -87,7 +87,7 @@ func (t *Tensor) EigenVectors(e float64) (ev1, ev2 *vector.Vector, singular bool
 func (t *Tensor) EigenValDir() (v1, v2, d1, d2 float64, singular bool) {
 	a := (t.XX + t.YY) * 0.5
 	b := (t.XX - t.YY) * 0.5
-	b = math.Sqrt(b*b - t.XY*t.XY)
+	b = math.Sqrt(b*b + t.XY*t.XY)
 	v1 = a + b
 	v2 = a - b
 	if float.Equal(v1, v2) {
