@@ -20,17 +20,6 @@ type Cell struct {
 	qtyIdxes []int
 	// region 表示单元格的区域范围.
 	region geom.Rect
-	/*
-		// hasSingularity 在当一个单元中有一个或多个奇点时为 true,
-		// 若 FullSingularArea 或 PartialSingularArea 为 true, 则此值必定同时为 true.
-		hasSingularity bool
-		// FullSingularArea 在当一个单元内所有区域的点都为退化点(对于张量)或奇点(对于向量)时为 true.
-		FullSingularArea bool
-		// PartialSingularArea 在当一个单元内只有部分连续区域的点为退化点(对于张量)或奇点(对于向量)区,
-		// 而其他区域为非退化点或奇点时为 true.
-		// 如果该值为 true, 则
-		PartialSingularArea bool
-	*/
 }
 
 // value 方法利用双线性插值的方法, 根据给定的值得到单元格内任一点的值.
@@ -45,10 +34,16 @@ func (c *Cell) value(x, y float64, ll, ul, lu, uu float64) float64 {
 	return v
 }
 
+// Node 代表网格线的交叉点, 也即单元格的顶点.
+type Node struct {
+	X, Y float64
+}
+
 // Grid 定义了平面区域的一个规则网格. 该网格在 x 和 y 方向分别是等间距的.
 // 其中的 cells 以行序的方式存储了对其他平面数据(以一维数组存储)的索引值.
 type Grid struct {
 	cells            []Cell
+	nodes            []Node
 	region           geom.Rect
 	xspan, yspan     float64
 	cellXN, cellYN   int
@@ -81,6 +76,12 @@ func NewGrid(r geom.Rect, cellXN, cellYN int) (g *Grid, err error) {
 		g.cells[i].region.Xmax = g.cells[i].region.Xmin + g.xspan
 		g.cells[i].region.Ymin = float64(yi) * g.yspan
 		g.cells[i].region.Ymax = g.cells[i].region.Ymin + g.yspan
+	}
+	g.nodes = make([]Node, g.nodeNum)
+	for i := 0; i < g.nodeNum; i++ {
+		xi, yi := g.nodePos(i)
+		g.nodes[i].X = float64(xi) * g.xspan
+		g.nodes[i].Y = float64(yi) * g.yspan
 	}
 	return g, nil
 }
@@ -183,6 +184,24 @@ func (g *Grid) adjNodeIdxes(ni int) ([]int, error) {
 		}
 	}
 	return nis, nil
+}
+
+// isAdjNodes 判断两个索引分别为 ni1 和 ni2 的节点是否相邻.
+// 一个单元格对角线两头的节点也被看做是相邻的.
+func (g *Grid) isAdjNodes(ni1, ni2 int) (bool, error) {
+	if ni1 >= len(g.nodes) || ni2 >= len(g.nodes) {
+		return false, errors.New("the input node index is out of range")
+	}
+	anis, err := g.adjNodeIdxes(ni1)
+	if err != nil {
+		return false, err
+	}
+	for _, ani := range anis {
+		if ani == ni2 {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // Region 返回矩形网格的范围.

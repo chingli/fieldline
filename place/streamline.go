@@ -1,8 +1,8 @@
 package place
 
 import (
-	"stj/fieldline/float"
 	"stj/fieldline/field"
+	"stj/fieldline/float"
 	"stj/fieldline/interp"
 )
 
@@ -11,8 +11,8 @@ type Streamline struct {
 	VectorQties []*field.VectorQty
 }
 
-// Looped 判断一条曲线是否为封闭曲线. 仅当曲线的起始点重合时, 曲线为封闭曲线.
-func (l *Streamline) Looped() bool {
+// isLooped 判断一条曲线是否为封闭曲线. 仅当曲线的起始点重合时, 曲线为封闭曲线.
+func (l *Streamline) isLooped() bool {
 	n := len(l.VectorQties)
 	if n < 4 {
 		return false
@@ -40,9 +40,9 @@ func (l *Streamline) Y(x float64) (ys []float64) {
 	for i := 0; i < len(idxes); i++ {
 		ys[i], _ = interp.CubicHermite(l.VectorQties[idxes[i]].X, l.VectorQties[idxes[i]+1].X,
 			l.VectorQties[idxes[i]].Y, l.VectorQties[idxes[i]+1].Y,
-			l.VectorQties[idxes[i]].Slope, l.VectorQties[idxes[i]+1].Slope, x)
+			l.VectorQties[idxes[i]].S, l.VectorQties[idxes[i]+1].S, x)
 	}
-	if x == l.VectorQties[n-1].X && !l.Looped() {
+	if x == l.VectorQties[n-1].X && !l.isLooped() {
 		ys = append(ys, l.VectorQties[n-1].Y)
 	}
 	if len(ys) == 0 {

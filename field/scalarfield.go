@@ -86,47 +86,51 @@ func (sf *ScalarField) GenNodes() (err error) {
 	return nil
 }
 
-var eps = 1.0E-10
+func (sf *ScalarField) isZeroNode(idx int) (bool, error) {
+	if idx >= len(sf.nodes) {
+		return false, errors.New("the input node index is out of range")
+	}
+	eps := 1.0E-5
+	if math.Abs(sf.nodes[idx].V) >= eps {
+		return false, nil
+	}
+	return true, nil
+}
 
 // ZeroNodeIdxes 方法返回标量场中的零值点. 其返回值是由多个点组成的曲线的列表.
 // 若标量场正好是由张量场的两个特征值之差的绝对值生成的, 则此方法返回的点, 线或区域正好就是张量场的退化点:
 // 若返回的某条曲线只包含一个点, 则该点是个孤立的退化点;
 // 若返回的某条曲线是一个非闭合曲线, 则该曲线是一条退化线;
 // 若返回的某条曲线是一个闭合曲线, 则该曲线所围绕的区域就是退化区域.
-func (sf *ScalarField) ZeroNodeIdxes() ([][]int, error) {
-	mean, err := sf.Mean()
-	if err != nil {
-		return nil, err
-	}
-	eps = math.Abs(mean) * 1.0E-5
-	println(">>> eps:", eps)
-	var pointIdxSet [][]int
-	checkedList := make([]bool, len(sf.nodes))
-	for ni, node := range sf.nodes {
-		if !checkedList[ni] {
-			checkedList[ni] = true
-			if math.Abs(node.V) < eps {
-				var pointIdxes []int
-				pointIdxes = append(pointIdxes, ni)
-				sf.checkAdjZeroNode(ni, &pointIdxes, checkedList)
-				pointIdxSet = append(pointIdxSet, pointIdxes)
+func (sf *ScalarField) ZeroNodeIdxes() (nodeIdxSet [][]int, err error) {
+	checked := make([]bool, len(sf.nodes))
+	for ni := 0; ni < len(sf.nodes); ni++ {
+		if !checked[ni] {
+			checked[ni] = true
+			isZero, _ := sf.isZeroNode(ni)
+			if isZero {
+				var nodeIdxes []int
+				nodeIdxes = append(nodeIdxes, ni)
+				sf.checkAdjZeroNode(ni, &nodeIdxes, checked)
+				nodeIdxSet = append(nodeIdxSet, nodeIdxes)
 			}
 		}
 	}
-	return pointIdxSet, nil
+	return nodeIdxSet, nil
 }
 
 // checkAdjZeroNode 方法检查所有与索引为 ni 的节点相邻的至多 8 个节点中是否包含有值为 0 的节点,
-// 如果包含, 则将该点放入 pointIdxes, 再次递归调用自己检查新零点的相邻点. 该方法最终将所有与节点
-// ni 能连通的节点都放入 pointIdxes 中.
-func (sf *ScalarField) checkAdjZeroNode(ni int, pointIdxes *[]int, checkedList []bool) {
+// 如果包含, 则将该点放入 nodeIdxes, 再次递归调用自己检查新零点的相邻点. 该方法最终将所有与节点
+// ni 能连通的节点都放入 nodeIdxes 中.
+func (sf *ScalarField) checkAdjZeroNode(ni int, nodeIdxes *[]int, checked []bool) {
 	ani, _ := sf.grid.adjNodeIdxes(ni)
 	for nii := 0; nii < len(ani); nii++ {
-		if !checkedList[ani[nii]] {
-			checkedList[ani[nii]] = true
-			if math.Abs(sf.nodes[ani[nii]].V) < eps {
-				*pointIdxes = append(*pointIdxes, ani[nii])
-				sf.checkAdjZeroNode(ani[nii], pointIdxes, checkedList) // 递归调用自己
+		if !checked[ani[nii]] {
+			checked[ani[nii]] = true
+			isZero, _ := sf.isZeroNode(ani[nii])
+			if isZero {
+				*nodeIdxes = append(*nodeIdxes, ani[nii])
+				sf.checkAdjZeroNode(ani[nii], nodeIdxes, checked) // 递归调用自己
 			}
 		}
 	}

@@ -1,11 +1,9 @@
-package field_test
+package field
 
 import (
 	"fmt"
 	"os"
 	"testing"
-
-	"stj/fieldline/field"
 )
 
 func TestParseTensorData(t *testing.T) {
@@ -22,44 +20,52 @@ func TestParseTensorData(t *testing.T) {
 		return
 	}
 
-	tf, err := field.ParseTensorData(input[:count])
+	tf, err := ParseTensorData(input[:count])
 	if tf == nil {
 		t.Errorf(err.Error())
 		return
 	}
-	ts, err := tf.NearN(50, 8.5, 3)
-	if err != nil {
-		t.Error(err.Error())
-		return
-	}
-	fmt.Println("在对齐之*前*的数据为:")
-	for _, t := range ts {
-		fmt.Printf("%v\t%v\t%e\t%e\t%e\t%e\t%e\n", t.X, t.Y, t.XX, t.YY, t.XY, t.ES1, t.ES2)
-	}
-	tf.Align()
-	tf.GenNodes()
-	fmt.Println("在对齐之*后*的数据为:")
-	for _, t := range ts {
-		fmt.Printf("%v\t%v\t%e\t%e\t%e\t%e\t%e\n", t.X, t.Y, t.XX, t.YY, t.XY, t.ES1, t.ES2)
-	}
-	s1, err := tf.EV1(50.0, 50.0)
-	if err != nil {
-		fmt.Println(err.Error())
-	} else {
-		fmt.Println(s1)
-	}
+	/*
+		ts, err := tf.NearN(50, 8.5, 3)
+		if err != nil {
+			t.Error(err.Error())
+			return
+		}
+		fmt.Println("在对齐之*前*的数据为:")
+		for _, t := range ts {
+			fmt.Printf("%v\t%v\t%e\t%e\t%e\t%e\t%e\n", t.X, t.Y, t.XX, t.YY, t.XY, t.ES1, t.ES2)
+		}
+		tf.Align()
+		tf.GenNodes()
+		fmt.Println("在对齐之*后*的数据为:")
+		for _, t := range ts {
+			fmt.Printf("%v\t%v\t%e\t%e\t%e\t%e\t%e\n", t.X, t.Y, t.XX, t.YY, t.XY, t.ES1, t.ES2)
+		}
+		s1, err := tf.EV1(50.0, 50.0)
+		if err != nil {
+			fmt.Println(err.Error())
+		} else {
+			fmt.Println(s1)
+		}
+	*/
 	df := tf.GenFieldOfEVDiff()
 	zni, err := df.ZeroNodeIdxes()
 	if err != nil {
 		fmt.Println(err.Error())
 	} else {
-		fmt.Println(len(zni))
 		for _, nodes := range zni {
 			fmt.Println("Degen:")
 			for _, node := range nodes {
 				fmt.Print("\t", node)
 			}
 			fmt.Println()
+		}
+	}
+
+	for _, nodes := range zni {
+		_, _ = df.grid.ParseZeroNode(nodes)
+		if err != nil {
+			fmt.Println(err.Error())
 		}
 	}
 }
