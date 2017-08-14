@@ -1,94 +1,94 @@
-package field
+package grid
 
 import (
 	"errors"
 	"math"
 )
 
-// PointShape, CurveShape, RegionSng 表示退化的类型.
+// PointRegion, CurveRegion, RegionSng 表示退化的类型.
 const (
-	PointShapeType = 1 << iota
-	CurveShapeType
-	RegionShapeType
-	CompositeShapeType
+	PointRegionType = 1 << iota
+	CurveRegionType
+	RegionRegionType
+	CompositeRegionType
 )
 
-// Shape 代表一个退化类型.
-type Shape interface {
-	// Form 用来标志该退化是属于退化点, 退化曲线或退化区域, 其值只应该是 PointShape, CurveShape 或 RegionShape.
-	Form() int
+// Region 代表一个退化类型.
+type Region interface {
+	// Form 用来标志该退化是属于退化点, 退化曲线或退化区域, 其值只应该是 PointRegion, CurveRegion 或 RegionRegion.
+	Type() int
 	// Index 表示向量或张量场中某个孤立奇点的庞加莱(Polincare) 指数, 即所谓的向量指数或张量指数.
 	//Index() int
 }
 
 // shape 结构体代表场中的退化点, 退化曲线或退化区域.
 type shape struct {
-	form  int
-	nodes []int
+	shapeType int
+	nodes     []int
 }
 
-func (s *shape) Form() int {
-	return s.form
+func (s *shape) Type() int {
+	return s.shapeType
 }
 
-// PointShape 是向量或张量场中的一个
+// PointRegion 是向量或张量场中的一个
 // 在张量场中, 该点实际上是一个脐点(Umbilical Point), 通常称为退化点(Degenerate Point).
-type PointShape struct {
+type PointRegion struct {
 	shape
 	point int
 }
 
-// CurveShape 是向量或张量场中的奇异曲线, 该曲线上的所有点都为奇点.
-type CurveShape struct {
+// CurveRegion 是向量或张量场中的奇异曲线, 该曲线上的所有点都为奇点.
+type CurveRegion struct {
 	shape
 }
 
-// RegionShape 是向量或张量场中的奇异区域, 该区域中的所有点都为奇点.
-type RegionShape struct {
+// RegionRegion 是向量或张量场中的奇异区域, 该区域中的所有点都为奇点.
+type RegionRegion struct {
 	shape
 	border []int
 }
 
-// GroupShape 是一个奇异区域以及由此奇异区域延伸出的奇异曲线组成的复合奇异构件.
+// GroupRegion 是一个奇异区域以及由此奇异区域延伸出的奇异曲线组成的复合奇异构件.
 // TODO: 由于其复杂性, 关于此结构体的操作在短期内不准备实现.
-type GroupShape struct {
+type GroupRegion struct {
 	shape
 	borders [][]int
 	curves  [][]int
 }
 
 // InSingularArea 判断一个点 (x, y) 是否在在退化区 sr 内.
-func (g *Grid) InSingularArea(x, y float64, sr *RegionShape) bool {
+func (g *Grid) InSingularArea(x, y float64, sr *RegionRegion) bool {
 	return false
 }
 
 // ParseZeroNode 方法分析给定的点列表, 判断其为
-func (g *Grid) ParseZeroNode(nodeIdxes []int) (Shape, error) {
-	if len(nodeIdxes) == 0 {
+func (g *Grid) ParseZeroNode(nis []int) (Region, error) {
+	if len(nis) == 0 {
 		return nil, errors.New("no point included")
 	}
 	// 点
-	if len(nodeIdxes) == 1 {
-		s := &PointShape{}
-		s.form = PointShapeType
-		s.point = nodeIdxes[0]
+	if len(nis) == 1 {
+		s := &PointRegion{}
+		s.shapeType = PointRegionType
+		s.point = nis[0]
 		return s, nil
 	}
 	// 线段
-	if len(nodeIdxes) == 2 {
-		s := &CurveShape{}
-		s.form = CurveShapeType
-		s.nodes = nodeIdxes
+	if len(nis) == 2 {
+		s := &CurveRegion{}
+		s.shapeType = CurveRegionType
+		s.nodes = nis
 		return s, nil
 	}
 	// 接下来可能是 curve, region 或 group
 	// 计算每个零节点的相邻零节点的个数.
-	adjZeroNodeNum := make([]int, len(nodeIdxes))
-	for i := 0; i < len(nodeIdxes); i++ {
-		anis, _ := g.adjNodeIdxes(nodeIdxes[i])
+	adjZeroNodeNum := make([]int, len(nis))
+	for i := 0; i < len(nis); i++ {
+		anis, _ := g.AdjNodeIdxes(nis[i])
 		for _, ani := range anis {
 			isZero := false
-			for _, idx := range nodeIdxes {
+			for _, idx := range nis {
 				if ani == idx {
 					isZero = true
 				}
@@ -99,10 +99,10 @@ func (g *Grid) ParseZeroNode(nodeIdxes []int) (Shape, error) {
 		}
 	}
 
-	checked := make([]bool, len(nodeIdxes)) // 逐一检查每个零节点, 对检查过的做标记
-	var curveNodeIdxes []int                // 顺序存储连通的零节点
+	checked := make([]bool, len(nis)) // 逐一检查每个零节点, 对检查过的做标记
+	var curveNodeIdxes []int          // 顺序存储连通的零节点
 	// 通过排除不可能是区域边界的值给 checked 和 checkedNum 赋初值.
-	for i := 0; i < len(nodeIdxes); i++ {
+	for i := 0; i < len(nis); i++ {
 		if adjZeroNodeNum[i] >= 7 { // 其实最大也就是 8 了
 			checked[i] = true
 		}
@@ -112,7 +112,7 @@ func (g *Grid) ParseZeroNode(nodeIdxes []int) (Shape, error) {
 	current := 0
 	// 如果存在一个 region, 则 region 上各节点的 adjZeroNodeNum 一定小于从该区域伸出的
 	// 枝杈上各节点的 adjZeroNodeNum. 该循环保证起始点一定在 region 边界上.
-	for maxAdjNum, i := 0, 0; i < len(nodeIdxes); i++ {
+	for maxAdjNum, i := 0, 0; i < len(nis); i++ {
 		if adjZeroNodeNum[i] < 7 && maxAdjNum < adjZeroNodeNum[i] {
 			maxAdjNum = adjZeroNodeNum[i]
 			current = i
@@ -120,33 +120,33 @@ func (g *Grid) ParseZeroNode(nodeIdxes []int) (Shape, error) {
 	}
 
 	// 存储第一个找到的点
-	//curveNodeIdxes = append(curveNodeIdxes, nodeIdxes[current])
+	//curveNodeIdxes = append(curveNodeIdxes, nis[current])
 	checked[current] = true
-	endIdx := nodeIdxes[current]
-	curveNodeIdxes = g.seekLink(nodeIdxes, adjZeroNodeNum, checked, current, endIdx)
+	endIdx := nis[current]
+	curveNodeIdxes = g.seekLink(nis, adjZeroNodeNum, checked, current, endIdx)
 	if len(curveNodeIdxes) >= 1 {
-		endIdx = nodeIdxes[len(curveNodeIdxes)-1]
+		endIdx = nis[len(curveNodeIdxes)-1]
 	}
-	reversedIdxes := g.seekLink(nodeIdxes, adjZeroNodeNum, checked, current, endIdx)
+	reversedIdxes := g.seekLink(nis, adjZeroNodeNum, checked, current, endIdx)
 	reverse(reversedIdxes)
-	reversedIdxes = append(reversedIdxes, nodeIdxes[current])
+	reversedIdxes = append(reversedIdxes, nis[current])
 	curveNodeIdxes = append(reversedIdxes, curveNodeIdxes...)
 
-	if adj, _ := g.isAdjNodes(curveNodeIdxes[0], curveNodeIdxes[len(curveNodeIdxes)-1]); adj {
-		s := &RegionShape{}
-		s.form = RegionShapeType
-		s.nodes = nodeIdxes
+	if adj, _ := g.IsAdjNodes(curveNodeIdxes[0], curveNodeIdxes[len(curveNodeIdxes)-1]); adj {
+		s := &RegionRegion{}
+		s.shapeType = RegionRegionType
+		s.nodes = nis
 		s.border = curveNodeIdxes
 		return s, nil
 	}
-	s := &CurveShape{}
-	s.form = CurveShapeType
-	s.nodes = nodeIdxes
+	s := &CurveRegion{}
+	s.shapeType = CurveRegionType
+	s.nodes = nis
 	return s, nil
 }
 
 // seekLink 从
-func (g *Grid) seekLink(nodeIdxes []int, adjZeroNodeNum []int, checked []bool, current, endIdx int) []int {
+func (g *Grid) seekLink(nis []int, adjZeroNodeNum []int, checked []bool, current, endIdx int) []int {
 	var curveNodeIdxes []int
 	notLineSeg := false
 	// 从第一个点开始进行两两对照逐次查找下一个点.
@@ -154,10 +154,10 @@ func (g *Grid) seekLink(nodeIdxes []int, adjZeroNodeNum []int, checked []bool, c
 		found := false
 		foundI := -1
 		maxAdjNum := 8
-		for j := 0; j < len(nodeIdxes); j++ {
+		for j := 0; j < len(nis); j++ {
 			if !checked[j] { // 保证该节点尚未放入 curveNodeIdxes, 并且还必须是边界点
 				// 两两对照看其是否相邻
-				adj, _ := g.isAdjNodes(nodeIdxes[current], nodeIdxes[j])
+				adj, _ := g.IsAdjNodes(nis[current], nis[j])
 				// 不光要找到近邻的, 还要还要排除从 region 边上伸出的单条枝杈
 				if adj && maxAdjNum > adjZeroNodeNum[j] {
 					maxAdjNum = adjZeroNodeNum[j]
@@ -169,9 +169,9 @@ func (g *Grid) seekLink(nodeIdxes []int, adjZeroNodeNum []int, checked []bool, c
 
 		if found {
 			checked[foundI] = true
-			curveNodeIdxes = append(curveNodeIdxes, nodeIdxes[foundI])
+			curveNodeIdxes = append(curveNodeIdxes, nis[foundI])
 
-			if adj, _ := g.isAdjNodes(nodeIdxes[foundI], endIdx); adj && notLineSeg {
+			if adj, _ := g.IsAdjNodes(nis[foundI], endIdx); adj && notLineSeg {
 				break
 			} else {
 				notLineSeg = true

@@ -11,8 +11,8 @@ type Streamline struct {
 	VectorQties []*field.VectorQty
 }
 
-// isLooped 判断一条曲线是否为封闭曲线. 仅当曲线的起始点重合时, 曲线为封闭曲线.
-func (l *Streamline) isLooped() bool {
+// IsLooped 判断一条曲线是否为封闭曲线. 仅当曲线的起始点重合时, 曲线为封闭曲线.
+func (l *Streamline) IsLooped() bool {
 	n := len(l.VectorQties)
 	if n < 4 {
 		return false
@@ -42,7 +42,7 @@ func (l *Streamline) Y(x float64) (ys []float64) {
 			l.VectorQties[idxes[i]].Y, l.VectorQties[idxes[i]+1].Y,
 			l.VectorQties[idxes[i]].S, l.VectorQties[idxes[i]+1].S, x)
 	}
-	if x == l.VectorQties[n-1].X && !l.isLooped() {
+	if x == l.VectorQties[n-1].X && !l.IsLooped() {
 		ys = append(ys, l.VectorQties[n-1].Y)
 	}
 	if len(ys) == 0 {

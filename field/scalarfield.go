@@ -3,6 +3,7 @@ package field
 import (
 	"errors"
 	"math"
+	"stj/fieldline/grid"
 )
 
 // ScalarQty 结构体表示场中的一个标量.
@@ -41,12 +42,12 @@ func (sf *ScalarField) Mean() (float64, error) {
 
 // idwValue 根据已知点数据利用 IDW 插值方法获得点 (x, y) 坐标处的值.
 func (sf *ScalarField) idwValue(x, y float64) (float64, error) {
-	xi, yi, idx, _ := sf.grid.cellPosIdx(x, y)
+	xi, yi, idx, _ := sf.grid.CellPosIdx(x, y)
 	for layer := MinInterpLayer; layer <= MaxInterpLayer; layer++ {
-		cells := sf.grid.nearCells(xi, yi, idx, layer)
-		qtyIdxes := make([]int, 0, int(1.25*AvgPointNumPerCell*float64(len(cells))))
+		cells := sf.grid.NearCellsAlt(xi, yi, idx, layer)
+		qtyIdxes := make([]int, 0, int(1.25*grid.AvgQtyNumPerCell*float64(len(cells))))
 		for i := 0; i < len(cells); i++ {
-			qtyIdxes = append(qtyIdxes, cells[i].qtyIdxes...)
+			qtyIdxes = append(qtyIdxes, cells[i].QtyIdxes...)
 		}
 		num := len(qtyIdxes)
 		fail := layer >= MaxInterpLayer && num < MinInterpQtyNum
@@ -72,11 +73,11 @@ func (sf *ScalarField) idwValue(x, y float64) (float64, error) {
 // GenNodes 根据张量场中无规则离散分布的张量场量数据 data, 通过反距离加权插值方法,
 // 计算各个单元格节点处的张量场量, 从而构建出可以进行双线性插值的张量场网格.
 func (sf *ScalarField) GenNodes() (err error) {
-	sf.nodes = make([]*ScalarQty, sf.grid.nodeNum)
-	for i := 0; i < sf.grid.nodeNum; i++ {
-		xi, yi := sf.grid.nodePos(i)
-		x := float64(xi) * sf.grid.xspan
-		y := float64(yi) * sf.grid.yspan
+	sf.nodes = make([]*ScalarQty, sf.grid.NodeNum)
+	for i := 0; i < sf.grid.NodeNum; i++ {
+		xi, yi := sf.grid.NodePos(i)
+		x := float64(xi) * sf.grid.XSpan
+		y := float64(yi) * sf.grid.YSpan
 		sf.nodes[i] = &ScalarQty{X: x, Y: y}
 		sf.nodes[i].V, err = sf.idwValue(x, y)
 		if err != nil {
@@ -123,7 +124,7 @@ func (sf *ScalarField) ZeroNodeIdxes() (nodeIdxSet [][]int, err error) {
 // 如果包含, 则将该点放入 nodeIdxes, 再次递归调用自己检查新零点的相邻点. 该方法最终将所有与节点
 // ni 能连通的节点都放入 nodeIdxes 中.
 func (sf *ScalarField) checkAdjZeroNode(ni int, nodeIdxes *[]int, checked []bool) {
-	ani, _ := sf.grid.adjNodeIdxes(ni)
+	ani, _ := sf.grid.AdjNodeIdxes(ni)
 	for nii := 0; nii < len(ani); nii++ {
 		if !checked[ani[nii]] {
 			checked[ani[nii]] = true

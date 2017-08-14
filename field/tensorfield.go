@@ -6,6 +6,7 @@ import (
 
 	"stj/fieldline/float"
 	"stj/fieldline/geom"
+	"stj/fieldline/grid"
 	"stj/fieldline/tensor"
 )
 
@@ -66,12 +67,12 @@ func (tf *TensorField) Aligned(t *TensorQty) bool {
 
 // idwTensorQty 根据张量场中原始无规则离散分布的 data 数据, 利反距离加权插值(IDW)方法获得任一点的张量场量.
 func (tf *TensorField) idwTensorQty(x, y float64) (tq *TensorQty, err error) {
-	xi, yi, idx, _ := tf.grid.cellPosIdx(x, y)
+	xi, yi, idx, _ := tf.grid.CellPosIdx(x, y)
 	for layer := MinInterpLayer; layer <= MaxInterpLayer; layer++ {
-		cells := tf.grid.nearCells(xi, yi, idx, layer)
-		qtyIdxes := make([]int, 0, int(1.25*AvgPointNumPerCell*float64(len(cells))))
+		cells := tf.grid.NearCellsAlt(xi, yi, idx, layer)
+		qtyIdxes := make([]int, 0, int(1.25*grid.AvgQtyNumPerCell*float64(len(cells))))
 		for i := 0; i < len(cells); i++ {
-			qtyIdxes = append(qtyIdxes, cells[i].qtyIdxes...)
+			qtyIdxes = append(qtyIdxes, cells[i].QtyIdxes...)
 		}
 		num := len(qtyIdxes)
 		/*
@@ -148,7 +149,7 @@ func (tf *TensorField) XX(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	nodeIdxes, err := tf.grid.nodeIdxes(x, y)
+	nodeIdxes, err := tf.grid.NodeIdxes(x, y)
 	if err != nil {
 		return 0.0, err
 	}
@@ -156,7 +157,7 @@ func (tf *TensorField) XX(x, y float64) (v float64, err error) {
 	ul := tf.nodes[nodeIdxes[1]].XX
 	lu := tf.nodes[nodeIdxes[2]].XX
 	uu := tf.nodes[nodeIdxes[3]].XX
-	return cell.value(x, y, ll, ul, lu, uu), nil
+	return cell.Value(x, y, ll, ul, lu, uu), nil
 }
 
 // YY 方法通过空间插值方法获得张量场内任意点 (x, y) 处的 YY 值.
@@ -165,7 +166,7 @@ func (tf *TensorField) YY(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	nodeIdxes, err := tf.grid.nodeIdxes(x, y)
+	nodeIdxes, err := tf.grid.NodeIdxes(x, y)
 	if err != nil {
 		return 0.0, err
 	}
@@ -173,7 +174,7 @@ func (tf *TensorField) YY(x, y float64) (v float64, err error) {
 	ul := tf.nodes[nodeIdxes[1]].YY
 	lu := tf.nodes[nodeIdxes[2]].YY
 	uu := tf.nodes[nodeIdxes[3]].YY
-	return cell.value(x, y, ll, ul, lu, uu), nil
+	return cell.Value(x, y, ll, ul, lu, uu), nil
 }
 
 // XY 方法通过空间插值方法获得张量场内任意点 (x, y) 处的 XY 值.
@@ -182,7 +183,7 @@ func (tf *TensorField) XY(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	nodeIdxes, err := tf.grid.nodeIdxes(x, y)
+	nodeIdxes, err := tf.grid.NodeIdxes(x, y)
 	if err != nil {
 		return 0.0, err
 	}
@@ -190,7 +191,7 @@ func (tf *TensorField) XY(x, y float64) (v float64, err error) {
 	ul := tf.nodes[nodeIdxes[1]].XY
 	lu := tf.nodes[nodeIdxes[2]].XY
 	uu := tf.nodes[nodeIdxes[3]].XY
-	return cell.value(x, y, ll, ul, lu, uu), nil
+	return cell.Value(x, y, ll, ul, lu, uu), nil
 }
 
 // EV1 方法通过空间插值方法获得张量场内任意点 (x, y) 处的特征值 EV1.
@@ -199,7 +200,7 @@ func (tf *TensorField) EV1(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	nodeIdxes, err := tf.grid.nodeIdxes(x, y)
+	nodeIdxes, err := tf.grid.NodeIdxes(x, y)
 	if err != nil {
 		return 0.0, err
 	}
@@ -207,7 +208,7 @@ func (tf *TensorField) EV1(x, y float64) (v float64, err error) {
 	ul := tf.nodes[nodeIdxes[1]].EV1
 	lu := tf.nodes[nodeIdxes[2]].EV1
 	uu := tf.nodes[nodeIdxes[3]].EV1
-	return cell.value(x, y, ll, ul, lu, uu), nil
+	return cell.Value(x, y, ll, ul, lu, uu), nil
 }
 
 // EV2 方法通过空间插值方法获得张量场内任意点 (x, y) 处的特征值 EV2.
@@ -216,7 +217,7 @@ func (tf *TensorField) EV2(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	nodeIdxes, err := tf.grid.nodeIdxes(x, y)
+	nodeIdxes, err := tf.grid.NodeIdxes(x, y)
 	if err != nil {
 		return 0.0, err
 	}
@@ -224,7 +225,7 @@ func (tf *TensorField) EV2(x, y float64) (v float64, err error) {
 	ul := tf.nodes[nodeIdxes[1]].EV2
 	lu := tf.nodes[nodeIdxes[2]].EV2
 	uu := tf.nodes[nodeIdxes[3]].EV2
-	return cell.value(x, y, ll, ul, lu, uu), nil
+	return cell.Value(x, y, ll, ul, lu, uu), nil
 }
 
 // ES1 方法通过空间插值方法获得张量场内任意点 (x, y) 处的流线函数导数(特征向量斜率) ES1.
@@ -233,7 +234,7 @@ func (tf *TensorField) ES1(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	nodeIdxes, err := tf.grid.nodeIdxes(x, y)
+	nodeIdxes, err := tf.grid.NodeIdxes(x, y)
 	if err != nil {
 		return 0.0, err
 	}
@@ -241,7 +242,7 @@ func (tf *TensorField) ES1(x, y float64) (v float64, err error) {
 	ul := tf.nodes[nodeIdxes[1]].ES1
 	lu := tf.nodes[nodeIdxes[2]].ES1
 	uu := tf.nodes[nodeIdxes[3]].ES1
-	return cell.value(x, y, ll, ul, lu, uu), nil
+	return cell.Value(x, y, ll, ul, lu, uu), nil
 }
 
 // ES2 方法通过空间插值方法获得张量场内任意点 (x, y) 处的流线函数导数(特征向量斜率) ES2.
@@ -250,7 +251,7 @@ func (tf *TensorField) ES2(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	nodeIdxes, err := tf.grid.nodeIdxes(x, y)
+	nodeIdxes, err := tf.grid.NodeIdxes(x, y)
 	if err != nil {
 		return 0.0, err
 	}
@@ -258,12 +259,12 @@ func (tf *TensorField) ES2(x, y float64) (v float64, err error) {
 	ul := tf.nodes[nodeIdxes[1]].ES2
 	lu := tf.nodes[nodeIdxes[2]].ES2
 	uu := tf.nodes[nodeIdxes[3]].ES2
-	return cell.value(x, y, ll, ul, lu, uu), nil
+	return cell.Value(x, y, ll, ul, lu, uu), nil
 }
 
 // Near 方法返回点 (x, y) 所在的单元格, 以及与该单元格紧邻的其他 layer 层单元格中所包含的所有张量.
 func (tf *TensorField) Near(x, y float64, layer int) (ts []*TensorQty, err error) {
-	qtyIdxes, err := tf.grid.Near(x, y, layer)
+	qtyIdxes, err := tf.grid.NearQtyIdxes(x, y, layer)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +277,7 @@ func (tf *TensorField) NearN(x, y float64, n int) (ts []*TensorQty, err error) {
 	var qtyIdxes []int
 	if n < len(tf.data) {
 		for layer := 0; ; layer++ {
-			qtyIdxes, err = tf.grid.Near(x, y, layer)
+			qtyIdxes, err = tf.grid.NearQtyIdxes(x, y, layer)
 			if err != nil {
 				return nil, err
 			}
@@ -314,23 +315,23 @@ func (tf *TensorField) Align() {
 		return
 	}
 	// 将第一个点的 aligned 字段设为 true, 作为后续设置的引子(参照)
-	for idx := 0; idx < len(tf.grid.cells); idx++ {
-		if len(tf.grid.cells[idx].qtyIdxes) != 0 {
+	for idx := 0; idx < len(tf.grid.Cells); idx++ {
+		if len(tf.grid.Cells[idx].QtyIdxes) != 0 {
 			//tf.data[tf.grid.cells[idx].qtyIdxes[0]].SwapEigen()
-			tf.data[tf.grid.cells[idx].qtyIdxes[0]].aligned = true
+			tf.data[tf.grid.Cells[idx].QtyIdxes[0]].aligned = true
 			break
 		}
 	}
-	for yi := 0; yi < tf.grid.cellYN; yi++ { // 逐行扫描
-		for xi := 0; xi < tf.grid.cellXN; xi++ { // 每行的中每列
-			idx := yi*tf.grid.cellXN + xi
+	for yi := 0; yi < tf.grid.CellYN; yi++ { // 逐行扫描
+		for xi := 0; xi < tf.grid.CellXN; xi++ { // 每行的中每列
+			idx := yi*tf.grid.CellXN + xi
 			// 如果点太稀疏， 在一层中也找不到 2 个点, 则加大扫描的范围(层数),
 			// 直到在一次搜索时能找到 2 个及以上点为止
 			for layer := 1; ; layer++ {
-				cells := tf.grid.nearCells(xi, yi, idx, layer)
-				qtyIdxes := make([]int, 0, int(1.25*AvgPointNumPerCell*float64(len(cells))))
+				cells := tf.grid.NearCellsAlt(xi, yi, idx, layer)
+				qtyIdxes := make([]int, 0, int(1.25*grid.AvgQtyNumPerCell*float64(len(cells))))
 				for i := 0; i < len(cells); i++ {
-					qtyIdxes = append(qtyIdxes, cells[i].qtyIdxes...)
+					qtyIdxes = append(qtyIdxes, cells[i].QtyIdxes...)
 				}
 				if tf.align(qtyIdxes) {
 					break // 跳出循环, 不再搜索下一层
@@ -378,12 +379,12 @@ func (tf *TensorField) align(qtyIdxes []int) bool {
 // 计算各个单元格节点处的张量场量, 从而构建出可以进行双线性插值的张量场网格.
 // 该方法必须在张量场已经执行过对齐(Align) 操作之后调用.
 func (tf *TensorField) GenNodes() (err error) {
-	n := (tf.grid.nodeXN) * (tf.grid.nodeYN) // 节点总数
+	n := (tf.grid.NodeXN) * (tf.grid.NodeYN) // 节点总数
 	tf.nodes = make([]*TensorQty, n)
 	for i := 0; i < n; i++ {
-		xi, yi := tf.grid.nodePos(i)
-		x := float64(xi) * tf.grid.xspan
-		y := float64(yi) * tf.grid.yspan
+		xi, yi := tf.grid.NodePos(i)
+		x := float64(xi) * tf.grid.XSpan
+		y := float64(yi) * tf.grid.YSpan
 		tf.nodes[i], err = tf.idwTensorQty(x, y)
 		if err != nil {
 			return err
@@ -473,11 +474,11 @@ func ParseTensorData(input []byte) (tf *TensorField, err error) {
 	//  cellXN(xn) 和 cellYN(yn) 由以下方程组求解得出:
 	// xn*span = xl
 	// yn*span = yl
-	// xn*yn*AvgPointNumPerCell = len(data)
-	cellXN := int(math.Ceil(math.Sqrt(float64(len(data)) * xl / (AvgPointNumPerCell * yl))))
-	cellYN := int(math.Ceil(math.Sqrt(float64(len(data)) * yl / (AvgPointNumPerCell * xl))))
+	// xn*yn*grid.AvgQtyNumPerCell = len(data)
+	cellXN := int(math.Ceil(math.Sqrt(float64(len(data)) * xl / (grid.AvgQtyNumPerCell * yl))))
+	cellYN := int(math.Ceil(math.Sqrt(float64(len(data)) * yl / (grid.AvgQtyNumPerCell * xl))))
 	r, _ := geom.NewRect(xmin, ymin, xmax, ymax)
-	g, err := NewGrid(*r, cellXN, cellYN)
+	g, err := grid.New(*r, cellXN, cellYN)
 	if err != nil {
 		return nil, errors.New("error occurs when create Grid")
 	}
