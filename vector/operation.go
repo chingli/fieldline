@@ -3,7 +3,6 @@ package vector
 import (
 	"errors"
 	"math"
-
 	"stj/fieldline/float"
 )
 
@@ -39,6 +38,17 @@ func Dot(a, b *Vector) float64 {
 
 // Parallel 判断两矢量是否平行. 零矢量和任何矢量平行.
 func Parallel(a, b *Vector) bool {
+	if a.IsZero() || b.IsZero(){
+		return true
+	}
+
+	if float.Equal(b.X, 0.0) && float.Equal(a.X, 0.0) || float.Equal(b.Y, 0.0) && float.Equal(a.Y, 0.0) {
+		return true
+	}
+	if float.Equal(b.X, 0.0) && !float.Equal(a.X, 0.0) || float.Equal(b.Y, 0.0) && !float.Equal(a.Y, 0.0) {
+		return false
+	}
+
 	return float.Equal(a.X/b.X, a.Y/b.Y)
 }
 
