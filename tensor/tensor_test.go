@@ -1,10 +1,9 @@
 package tensor_test
 
 import (
-	"fmt"
-	"testing"
 
 	"stj/fieldline/tensor"
+	"testing"
 )
 
 var (
@@ -12,7 +11,17 @@ var (
 )
 
 func TestEigenVector(t *testing.T) {
-	stress := tensor.New(3, 0, 0)
-	v1, v2, a1, a2, de := stress.EigenValDir()
-	fmt.Printf("V1: %v, V2: %v, A1: %v, A2: %v, Degen: %v\n", v1, v2, a1, a2, de)
+	a := tensor.New(0, 0, 0)
+	b := tensor.New(1, 2, 1) // Todo:存在sqrt中小于0的情况，无处理
+	_, _, _, _, de :=  a.EigenValDir()
+	_, _, _, _, de_one := b.EigenValDir()
+	if !de  {
+		t.Error("the degenerate point was true")
+	}
+
+	if de_one {
+		t.Error("the degenerate point was wrong ")
+	}
+
+
 }

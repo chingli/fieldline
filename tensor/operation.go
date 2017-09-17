@@ -8,7 +8,8 @@ func Equal(t1, t2 *Tensor) bool {
 }
 
 // Add 实现了任意数量的张量相加.
-func Add(ss ...*Tensor) (rt *Tensor) {
+func Add(ss ...*Tensor) *Tensor {
+	rt := new(Tensor)
 	for _, s := range ss {
 		rt.XX += s.XX
 		rt.YY += s.YY
@@ -18,7 +19,8 @@ func Add(ss ...*Tensor) (rt *Tensor) {
 }
 
 // Sub 实现了两个张量的减法.
-func Sub(s1, s2 *Tensor) (rt *Tensor) {
+func Sub(s1, s2 *Tensor) *Tensor{
+	rt := new(Tensor)
 	rt.XX = s1.XX - s2.XX
 	rt.YY = s1.YY - s2.YY
 	rt.XY = s1.XY - s2.XY
@@ -26,7 +28,8 @@ func Sub(s1, s2 *Tensor) (rt *Tensor) {
 }
 
 // Rescale 计算一个张量与一个数的乘积.
-func Rescale(s *Tensor, r float64) (rt *Tensor) {
+func Rescale(s *Tensor, r float64) *Tensor {
+	rt := new(Tensor)
 	rt.XX = s.XX * r
 	rt.YY = s.YY * r
 	rt.XY = s.XY * r
