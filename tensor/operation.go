@@ -1,6 +1,8 @@
 package tensor
 
-import "stj/fieldline/float"
+import (
+	"stj/fieldline/float"
+)
 
 // Equal 判断两张量是否相等, 若相等, 则返回 True.
 func Equal(t1, t2 *Tensor) bool {
@@ -8,30 +10,36 @@ func Equal(t1, t2 *Tensor) bool {
 }
 
 // Add 实现了任意数量的张量相加.
-func Add(ss ...*Tensor) *Tensor {
-	rt := new(Tensor)
+func Add(ss ...*Tensor) (rt *Tensor) {
+	rt =new(Tensor)
 	for _, s := range ss {
 		rt.XX += s.XX
 		rt.YY += s.YY
 		rt.XY += s.XY
 	}
-	return rt
+	return
 }
 
 // Sub 实现了两个张量的减法.
-func Sub(s1, s2 *Tensor) *Tensor{
-	rt := new(Tensor)
+func Sub(s1, s2 *Tensor) (rt *Tensor){
+	rt =new(Tensor)
 	rt.XX = s1.XX - s2.XX
 	rt.YY = s1.YY - s2.YY
 	rt.XY = s1.XY - s2.XY
-	return rt
+	return
 }
 
 // Rescale 计算一个张量与一个数的乘积.
-func Rescale(s *Tensor, r float64) *Tensor {
-	rt := new(Tensor)
+func Rescale(s *Tensor, r float64) (rt *Tensor) {
+	rt =new(Tensor)
+
 	rt.XX = s.XX * r
 	rt.YY = s.YY * r
 	rt.XY = s.XY * r
-	return rt
+	return
+
 }
+
+
+
+
