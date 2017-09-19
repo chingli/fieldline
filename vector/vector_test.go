@@ -13,16 +13,16 @@ func TestZero(t *testing.T) {
 	}
 }
 
-func TestBx(t *testing.T) {
+func TestBxBy(t *testing.T) {
 	v1 := vector.Bx()
 	v2 := vector.New(1, 0)
 	v3 := vector.By()
 	v4 := vector.New(0, 1)
 	if !vector.Equal(v1, v2) {
-		t.Error("the generated vector with Bx func is not right")
+		t.Error("the generated vector with Bx func is wrong")
 	}
 	if !vector.Equal(v3, v4) {
-		t.Error("the generated vector with By func is wrong!")
+		t.Error("the generated vector with By func is wrong")
 	}
 }
 
