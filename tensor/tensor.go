@@ -87,6 +87,7 @@ func (t *Tensor) EigenVectors(e float64) (ev1, ev2 *vector.Vector, singular bool
 func (t *Tensor) EigenValDir() (v1, v2, d1, d2 float64, singular bool) {
 	a := (t.XX + t.YY) * 0.5
 	b := (t.XX - t.YY) * 0.5
+	// 实对称二阶张量总存在特征值, 可证明以下 Sqrt 的参数总是正值
 	b = math.Sqrt(b*b + t.XY*t.XY)
 	v1 = a + b
 	v2 = a - b
@@ -108,12 +109,8 @@ func (t *Tensor) EigenValDir() (v1, v2, d1, d2 float64, singular bool) {
 	d1 = 0.5 * math.Atan(-2.0*t.XY/(t.XX-t.YY)) // 必有 -PI/4 < d1 < PI/4
 	d2 = d1 + 0.5*math.Pi                       // 必有 PI/4 < d2 < 3*PI/4
 	if t.XX < t.YY {
-		//v1, v2 = v2, v1
 		d1, d2 = d2, d1
 	}
-	//if d1 < 0.0 {
-	//	d1 += math.Pi
-	//}
 	return v1, v2, d1, d2, false
 }
 
