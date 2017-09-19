@@ -36,5 +36,4 @@ func Rescale(s *Tensor, r float64) (rt *Tensor) {
 	rt.YY = s.YY * r
 	rt.XY = s.XY * r
 	return rt
-
 }

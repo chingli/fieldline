@@ -105,9 +105,8 @@ func (t *Tensor) EigenValDir() (v1, v2, d1, d2 float64, singular bool) {
 		// 前面已经判断过退化的情况了, 这里不用再判断
 		return v1, v2, d1, d2, false
 	}
-	//todo:d1 = 0.5 * math.Atan(2.0*t.XY/(t.yy-t.xx))
-	d1 = 0.5 * math.Atan(2.0*t.XY/(t.XX-t.YY)) // 必有 -PI/4 < d1 < PI/4
-	d2 = d1 + 0.5*math.Pi                      // 必有 PI/4 < d2 < 3*PI/4
+	d1 = 0.5 * math.Atan(-2.0*t.XY/(t.XX-t.YY)) // 必有 -PI/4 < d1 < PI/4
+	d2 = d1 + 0.5*math.Pi                       // 必有 PI/4 < d2 < 3*PI/4
 	if t.XX < t.YY {
 		//v1, v2 = v2, v1
 		d1, d2 = d2, d1

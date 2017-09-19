@@ -22,5 +22,4 @@ func TestEigenVector(t *testing.T) {
 	if de_one {
 		t.Error("the degenerate point was wrong ")
 	}
-
 }

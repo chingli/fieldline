@@ -17,7 +17,6 @@ func TestSub(t *testing.T) {
 	v := tensor.Sub(tensor.New(1, 2, 4), tensor.New(4, 5, 6))
 	if !tensor.Equal(v, tensor.New(-3, -3, -2)) {
 		t.Error("Add func has sth wrong")
-
 	}
 }
 
