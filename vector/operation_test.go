@@ -1,16 +1,32 @@
 package vector_test
 
 import (
+	"math"
 	"testing"
-	"stj/fieldline/vector"
 
+	"stj/fieldline/float"
+	"stj/fieldline/vector"
 )
 
 func TestParallel(t *testing.T) {
-	v1 := vector.New(0, 2)
-	v2 := vector.New(0, 4)
-
+	v1 := vector.New(1, 2)
+	v2 := vector.New(2, 4)
 	if !vector.Parallel(v1, v2) {
+		t.Error("Parallel func has sth wrong")
+	}
+	v1 = vector.New(0, 2)
+	v2 = vector.New(0, 4)
+	if !vector.Parallel(v1, v2) {
+		t.Error("Parallel func has sth wrong")
+	}
+	v1 = vector.New(2, 2)
+	v2 = vector.New(0, 4)
+	if vector.Parallel(v1, v2) {
+		t.Error("Parallel func has sth wrong")
+	}
+	v1 = vector.New(1, 2)
+	v2 = vector.New(3, 4)
+	if vector.Parallel(v1, v2) {
 		t.Error("Parallel func has sth wrong")
 	}
 }
@@ -31,21 +47,18 @@ func TestSub(t *testing.T) {
 }
 
 func TestRescale(t *testing.T) {
-	a := vector.New(2, 1)
-	b := vector.New(-1, 1)
-	x := vector.Sub(vector.Rescale(a, 2), vector.Rescale(b, 3))
-	y := vector.Sub(vector.Rescale(a, 3), vector.Rescale(b, 5))
-	if !vector.Equal(x, vector.New(7, -1)) || !vector.Equal(y, vector.New(11, -2)) {
-		t.Error("sth wrong")
+	v1 := vector.New(2, 1)
+	v2 := vector.New(3, 1.5)
+	if !vector.Equal(vector.Rescale(v1, 1.5), v2) {
+		t.Error("Rescale func is wrong")
 	}
 }
 
 func TestAngle(t *testing.T) {
-	a := vector.New(2,1)
-	b := vector.New(-1,1)
-	_,err := vector.Angle(a,b)
-
-	if err != nil{
-		t.Error("the angle is wrong")
+	v1 := vector.New(1, 0)
+	v2 := vector.New(0, 1)
+	a, err := vector.Angle(v1, v2)
+	if err != nil || !float.Equal(a, math.Pi/2.0) {
+		t.Error("Angle func is wrong")
 	}
 }
