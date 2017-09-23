@@ -18,7 +18,7 @@ func TestIDW(t *testing.T) {
 	x, y := 110.0, 150.0
 	val, err := field.IDW(ss, x, y, 2.0)
 	if err != nil || math.Abs(val-113.5947) > 1.0e-4 {
-		t.Error("func IDW wrong: ", err)
+		t.Error("func IDW wrong")
 	}
 
 	ss = []*field.ScalarQty{field.NewScalarQty(70, 140, 115.4),
@@ -31,7 +31,7 @@ func TestIDW(t *testing.T) {
 	x, y = 110.0, 150.0
 	val, err = field.IDW(ss, x, y, field.DefaultIDWPower)
 	if err != nil || math.Abs(val-112.5889) > 1.0e-4 {
-		t.Error("func IDW wrong: ", err)
+		t.Error("func IDW wrong")
 	}
 
 	ss = []*field.ScalarQty{field.NewScalarQty(70, 140, 115.4),
@@ -45,6 +45,6 @@ func TestIDW(t *testing.T) {
 	x, y = 110.0, 150.0
 	val, err = field.IDW(ss, x, y, 2.0)
 	if err != nil || math.Abs(val-115.0) > 1.0e-4 {
-		t.Error("func IDW wrong: ", err)
+		t.Error("func IDW wrong")
 	}
 }
