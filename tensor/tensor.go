@@ -82,7 +82,7 @@ func (t *Tensor) EigenVectors(e float64) (ev1, ev2 *vector.Vector, singular bool
 
 // EigenValDir 计算张量矩阵的特征值和方向角, 其中 (v1, d1) 和 (v2, d2) 分别是张量的
 // 两个特征向量的特征值和方向角, 他们两两对应. 返回的特征值总有 v1 >= v2. d1, d2 的
-// 变化区间为 [-PI/4, 3*PI/4]. 若 v1 == v2, 则该张量退化, 这时 singular 为 true, 且 d1,
+// 变化区间为 [-PI/2, PI/2]. 若 v1 == v2, 则该张量退化, 这时 singular 为 true, 且 d1,
 // d2 可以为任意值; 否则 singular 为 false.
 func (t *Tensor) EigenValDir() (v1, v2, d1, d2 float64, singular bool) {
 	a := (t.XX + t.YY) * 0.5
@@ -95,6 +95,7 @@ func (t *Tensor) EigenValDir() (v1, v2, d1, d2 float64, singular bool) {
 		// 这里返回的方向角是随意选取的, 为了保持一致性, 使他们相差 PI/2
 		return v1, v2, 0.25 * math.Pi, 0.75 * math.Pi, true
 	}
+	// 针对方向角计算公式中分母可能为 0 的情况进行单独处理
 	if float.Equal(t.XX, t.YY) {
 		if t.XY > 0 {
 			d1 = -0.25 * math.Pi
@@ -106,11 +107,17 @@ func (t *Tensor) EigenValDir() (v1, v2, d1, d2 float64, singular bool) {
 		// 前面已经判断过退化的情况了, 这里不用再判断
 		return v1, v2, d1, d2, false
 	}
+	// 保证 d1, d2 都处在 [-PI/2, PI/2] 区间内
+	d1 = 0.5 * math.Atan(-2.0*t.XY/(t.XX-t.YY))
+	if d1 <= 0.0 {
+		d2 = d1 + 0.5*math.Pi
+	} else {
+		d2 = d1 - 0.5*math.Pi
+	}
 
-	// 必有 PI/4 < d2 < 3*PI/4
-	d1 = 0.5 * math.Atan(-2.0*t.XY/(t.XX-t.YY)) // 必有 -PI/4 < d1 < PI/4
-	d2 = d1 + 0.5*math.Pi                       // 必有 PI/4 < d2 < 3*PI/4
-	if t.XX < t.YY {
+	// 最大特征值 v1 总是偏向于 XX 和 YY 中的最大者
+	// 当 XX 较小时, v1 偏向 YY, 所对应的 d1 的绝对值应更大
+	if t.XX < t.YY && math.Abs(d1) < math.Abs(d2) {
 		d1, d2 = d2, d1
 	}
 	return v1, v2, d1, d2, false
