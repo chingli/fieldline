@@ -1,29 +1,50 @@
 package field_test
 
 import (
-	"math/rand"
+	"math"
 	"testing"
-	"time"
 
 	"stj/fieldline/field"
 )
 
-//产生随机数,便于出现定向问题错误
-//todo:若存在该求点,反距离1/d出现错误
-func randfloat() []*field.ScalarQty {
-	rt := make([]*field.ScalarQty, 10)
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for i := 0; i < 10; i++ {
-		rt[i] = &field.ScalarQty{float64(r.Intn(10)), float64(r.Intn(10)), r.Float64()}
-
-	}
-	return rt
-}
 func TestIDW(t *testing.T) {
-	rt := randfloat()
-	_, err := field.IDW(rt, rand.Float64(), rand.Float64(), field.DefaultIDWPower)
-	if err != nil {
-		t.Error("the IDW operation is wrong")
+	ss := []*field.ScalarQty{field.NewScalarQty(70, 140, 115.4),
+		field.NewScalarQty(115, 115, 123.1),
+		field.NewScalarQty(150, 150, 113.8),
+		field.NewScalarQty(110, 170, 110.5),
+		field.NewScalarQty(90, 190, 107.2),
+		field.NewScalarQty(180, 210, 131.78),
+	}
+	x, y := 110.0, 150.0
+	val, err := field.IDW(ss, x, y, 2.0)
+	if err != nil || math.Abs(val-113.5947) > 1.0e-4 {
+		t.Error("func IDW wrong: ", err)
 	}
 
+	ss = []*field.ScalarQty{field.NewScalarQty(70, 140, 115.4),
+		field.NewScalarQty(115, 115, 123.1),
+		field.NewScalarQty(150, 150, 113.8),
+		field.NewScalarQty(110, 170, 110.5),
+		field.NewScalarQty(90, 190, 107.2),
+		field.NewScalarQty(180, 210, 131.78),
+	}
+	x, y = 110.0, 150.0
+	val, err = field.IDW(ss, x, y, field.DefaultIDWPower)
+	if err != nil || math.Abs(val-112.5889) > 1.0e-4 {
+		t.Error("func IDW wrong: ", err)
+	}
+
+	ss = []*field.ScalarQty{field.NewScalarQty(70, 140, 115.4),
+		field.NewScalarQty(115, 115, 123.1),
+		field.NewScalarQty(150, 150, 113.8),
+		field.NewScalarQty(110, 170, 110.5),
+		field.NewScalarQty(110, 150, 115.0), // 和待求点重合
+		field.NewScalarQty(90, 190, 107.2),
+		field.NewScalarQty(180, 210, 131.78),
+	}
+	x, y = 110.0, 150.0
+	val, err = field.IDW(ss, x, y, 2.0)
+	if err != nil || math.Abs(val-115.0) > 1.0e-4 {
+		t.Error("func IDW wrong: ", err)
+	}
 }

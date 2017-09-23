@@ -3,6 +3,7 @@ package field
 import (
 	"errors"
 	"math"
+
 	"stj/fieldline/grid"
 )
 

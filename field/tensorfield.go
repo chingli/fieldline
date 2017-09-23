@@ -475,7 +475,7 @@ func ParseTensorData(input []byte) (tf *TensorField, err error) {
 	// xn*span = xl
 	// yn*span = yl
 	// xn*yn*grid.AvgQtyNumPerCell = len(data)
-	cellXN := int(math.Ceil(math.Sqrt(float64(len(data)) * xl / (grid.AvgQtyNumPerCell * yl))))//Todo:公式错误，有待修改
+	cellXN := int(math.Ceil(math.Sqrt(float64(len(data)) * xl / (grid.AvgQtyNumPerCell * yl))))
 	cellYN := int(math.Ceil(math.Sqrt(float64(len(data)) * yl / (grid.AvgQtyNumPerCell * xl))))
 	r, _ := geom.NewRect(xmin, ymin, xmax, ymax)
 	g, err := grid.New(*r, cellXN, cellYN)
