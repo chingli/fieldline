@@ -79,8 +79,9 @@ func (t *Tensor) EigVectors(e float64) (ev1, ev2 *vector.Vector, singular bool) 
 }
 
 // EigValDir 计算张量矩阵的特征值和方向角, 其中 (v1, d1) 和 (v2, d2) 分别是张量的
-// 两个特征向量的特征值和方向角, 他们两两对应. 返回的特征值总有 v1 >= v2. d1, d2 的
-// 变化区间为 [-PI/2, PI/2]. 若 v1 == v2, 则该张量退化, 这时 singular 为 true, 且 d1,
+// 两个特征向量的特征值和方向角, 他们两两对应. 返回的特征值总有 v1 >= v2. d1, d2 为
+// x 轴和主应力的夹角, 逆时针为正, 顺时针为负. d1, d2 的变化区间为 [-PI/2, PI/2].
+// 若 v1 == v2, 则该张量退化, 这时 singular 为 true, 且 d1,
 // d2 可以为任意值; 否则 singular 为 false.
 func (t *Tensor) EigValDir() (v1, v2, d1, d2 float64, singular bool) {
 	if num.Equal(t.XX, t.YY) && num.Equal(t.XY, 0.0) {
@@ -93,11 +94,14 @@ func (t *Tensor) EigValDir() (v1, v2, d1, d2 float64, singular bool) {
 		d2 = -d1
 	} else {
 		// 保证 d1, d2 都处在 [-PI/2, PI/2] 区间内
-		d1 = 0.5 * math.Atan(-2.0*t.XY/(t.XX-t.YY))
+		d1 = 0.5 * math.Atan(-2.0*t.XY/(t.XX-t.YY)) // 必有 -PI/4 < d1 < PI/4
+		//d2 = d1 + 0.5*math.Pi                       // 必有 PI/4 < d2 < PI*3/4
 		if d1 <= 0.0 {
-			d2 = d1 + 0.5*math.Pi
+			d2 = d1 + 0.5*math.Pi // 必有 PI/4 < d2 < PI/2
+
 		} else {
-			d2 = d1 - 0.5*math.Pi
+			d2 = d1 - 0.5*math.Pi // 必有 -PI/2 <= d2 < -PI/4
+
 		}
 	}
 	v1 = 0.5*(t.XX+t.YY) + 0.5*(t.XX-t.YY)*math.Cos(2.0*d1) - t.XY*math.Sin(2.0*d1)
