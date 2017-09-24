@@ -1,10 +1,10 @@
-package float_test
+package num_test
 
 import (
 	"math"
 	"testing"
 
-	"stj/fieldline/float"
+	"stj/fieldline/num"
 )
 
 type data struct {
@@ -18,16 +18,16 @@ var dataList = []data{
 	data{0.1e-307, 0.11e-307, false},
 	data{-0.1e-307, -0.11e-307, false},
 	data{math.Float64frombits(0), math.Float64frombits(1), true},
-	data{math.Float64frombits(0), math.Float64frombits(uint64(float.DefaultULP)), true},
-	data{math.Float64frombits(0), math.Float64frombits(uint64(float.DefaultULP) + 1), false},
+	data{math.Float64frombits(0), math.Float64frombits(uint64(num.DefaultULP)), true},
+	data{math.Float64frombits(0), math.Float64frombits(uint64(num.DefaultULP) + 1), false},
 	data{math.Float64frombits(10000000000), math.Float64frombits(10000000001), true},
-	data{math.Float64frombits(10000000000), math.Float64frombits(10000000000 + uint64(float.DefaultULP)), true},
-	data{math.Float64frombits(10000000000), math.Float64frombits(10000000000 + uint64(float.DefaultULP) + 1), false},
+	data{math.Float64frombits(10000000000), math.Float64frombits(10000000000 + uint64(num.DefaultULP)), true},
+	data{math.Float64frombits(10000000000), math.Float64frombits(10000000000 + uint64(num.DefaultULP) + 1), false},
 }
 
 func TestEqual(t *testing.T) {
 	for _, d := range dataList {
-		if float.Equal(d.a, d.b) != d.equal {
+		if num.Equal(d.a, d.b) != d.equal {
 			if d.equal {
 				t.Errorf("%.50e and %.50e should equal.\n", d.a, d.b)
 			} else {

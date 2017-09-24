@@ -2,6 +2,7 @@ package field
 
 import (
 	"math"
+
 	"stj/fieldline/vector"
 )
 

@@ -4,7 +4,7 @@ import (
 	"math"
 	"strconv"
 
-	"stj/fieldline/float"
+	"stj/fieldline/num"
 )
 
 // parseLineData 对一行文本进行解析, 并返回其中包含的数字列表.
@@ -54,7 +54,7 @@ func isFloatChar(c byte) bool {
 
 // relErr 计算 x1, x2 之间的相对误差.
 func relErr(x1, x2 float64) float64 {
-	if float.Equal(x1, 0.0) && float.Equal(x2, 0.0) {
+	if num.Equal(x1, 0.0) && num.Equal(x2, 0.0) {
 		return 0.0
 	}
 	return math.Abs(x1-x2) / math.Max(math.Abs(x1), math.Abs(x2))

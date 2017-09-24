@@ -27,11 +27,11 @@ var (
 	}
 )
 
-func TestEigenValDir(t *testing.T) {
+func TestEigValDir(t *testing.T) {
 	for _, th := range tensors {
-		ev1, ev2, ed1, ed2, s := th.t.EigenValDir()
+		ev1, ev2, ed1, ed2, s := th.t.EigValDir()
 		if !equal(ev1, th.ev1) || !equal(ev2, th.ev2) || !equal(math.Cos(ed1), math.Cos(th.ed1)) || !equal(math.Cos(ed2), math.Cos(th.ed2)) || s != th.s {
-			t.Error("func EigenValDir wrong")
+			t.Error("func EigValDir wrong")
 		}
 	}
 }

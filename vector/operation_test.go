@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"stj/fieldline/float"
+	"stj/fieldline/num"
 	"stj/fieldline/vector"
 )
 
@@ -58,7 +58,7 @@ func TestAngle(t *testing.T) {
 	v1 := vector.New(1, 0)
 	v2 := vector.New(0, 1)
 	a, err := vector.Angle(v1, v2)
-	if err != nil || !float.Equal(a, math.Pi/2.0) {
+	if err != nil || !num.Equal(a, math.Pi/2.0) {
 		t.Error("Angle func is wrong")
 	}
 }

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"math"
 
-	"stj/fieldline/float"
 	"stj/fieldline/geom"
 	"stj/fieldline/grid"
+	"stj/fieldline/num"
 	"stj/fieldline/tensor"
 )
 
@@ -430,13 +430,13 @@ func ParseTensorData(input []byte) (tf *TensorField, err error) {
 			line = line[:len(line)-1]
 		}
 		floats = parseLineData(line)
-		if len(floats) == 5 { // 如果每行解析出的文本数不等于 5,, 则并不满足张量数据需求, 直接舍弃
-			isZeroTensor := float.Equal(floats[2], 0.0) && float.Equal(floats[3], 0.0) && float.Equal(floats[4], 0.0)
+		if len(floats) == 5 { // 如果每行解析出的文本数不等于 5, 则并不满足张量数据需求, 直接舍弃
+			isZeroTensor := num.Equal(floats[2], 0.0) && num.Equal(floats[3], 0.0) && num.Equal(floats[4], 0.0)
 			if !DiscardZeroQty || (DiscardZeroQty && !isZeroTensor) {
 				data = append(data, NewTensorQty(floats[0], floats[1], floats[2], floats[3], floats[4]))
 			}
 		}
-		// 跳过行尾的换车或换行, 并跳过仅包含回车或换行的空行
+		// 跳过行尾的回车或换行, 并跳过仅包含回车或换行的空行
 		if end < length {
 			for c := input[end]; end < length && (c == '\n' || c == '\r'); {
 				c = input[end]
@@ -446,7 +446,7 @@ func ParseTensorData(input []byte) (tf *TensorField, err error) {
 		beg = end
 	}
 	if len(data) == 0 {
-		return nil, errors.New("no valid parsed")
+		return nil, errors.New("no valid data parsed")
 	}
 	xmin, ymin := data[0].X, data[0].Y
 	xmax, ymax := xmin, ymin

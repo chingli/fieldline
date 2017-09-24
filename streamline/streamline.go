@@ -2,8 +2,8 @@ package place
 
 import (
 	"stj/fieldline/field"
-	"stj/fieldline/float"
 	"stj/fieldline/interp"
+	"stj/fieldline/num"
 )
 
 // Streamline 为场内的一条流线. 它由一系列点, 各点的斜率, 各点的矢量范数控制.
@@ -17,7 +17,7 @@ func (l *Streamline) IsLooped() bool {
 	if n < 4 {
 		return false
 	}
-	if float.Equal(l.VectorQties[0].X, l.VectorQties[n-1].X) && float.Equal(l.VectorQties[0].Y, l.VectorQties[n-1].Y) {
+	if num.Equal(l.VectorQties[0].X, l.VectorQties[n-1].X) && num.Equal(l.VectorQties[0].Y, l.VectorQties[n-1].Y) {
 		return true
 	}
 	return false

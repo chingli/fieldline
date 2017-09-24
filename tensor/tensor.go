@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"stj/fieldline/float"
+	"stj/fieldline/num"
 	"stj/fieldline/vector"
 )
 
@@ -23,11 +23,9 @@ func Zero() *Tensor {
 	return &Tensor{}
 }
 
+// IsZero 判断张量是否为零张量, 仅当张量所有的元素都等于 0 时, 该张量是零张量.
 func (t *Tensor) IsZero() bool {
-	if float.Equal(math.Abs(t.XX)+math.Abs(t.YY)+math.Abs(t.XY), 0.0) {
-		return true
-	}
-	return false
+	return num.Equal(math.Abs(t.XX)+math.Abs(t.YY)+math.Abs(t.XY), 0.0)
 }
 
 // Ele 新建一个单位张量, 该张量对角线的各元素值为 1, 而其他元素值都为 0.
@@ -67,30 +65,30 @@ func (t *Tensor) Norm() float64 {
 
 // String 以美观的矩阵形式打印张量.
 func (t *Tensor) String() string {
-	return fmt.Sprintf("%e, %e, %e\n", t.XX, t.YY, t.XY)
+	return fmt.Sprintf("\t%e\t%e\n\t%e\t%e\n", t.XX, t.XY, t.XY, t.YY)
 }
 
-// EigenVectors 计算并返回张量的特征向量. 所得 ev1 的范数(大小, 模长, 模)总是
+// EigVectors 计算并返回张量的特征向量. 所得 ev1 的范数(大小, 模长, 模)总是
 // 大于 ev2. 当 singular = true 时, 表示张量在此退化, 这时有 |ev1| = |ev2|, 而其
 // 指向则失去意义.
-func (t *Tensor) EigenVectors(e float64) (ev1, ev2 *vector.Vector, singular bool) {
-	v1, v2, a1, a2, singular := t.EigenValDir()
-	ev1 = vector.New(v1*math.Cos(a1), v1*math.Sin(a1))
-	ev2 = vector.New(v2*math.Cos(a2), v2*math.Sin(a2))
+func (t *Tensor) EigVectors(e float64) (ev1, ev2 *vector.Vector, singular bool) {
+	v1, v2, d1, d2, singular := t.EigValDir()
+	ev1 = vector.New(v1*math.Cos(d1), v1*math.Sin(d1))
+	ev2 = vector.New(v2*math.Cos(d2), v2*math.Sin(d2))
 	return ev1, ev2, singular
 }
 
-// EigenValDir 计算张量矩阵的特征值和方向角, 其中 (v1, d1) 和 (v2, d2) 分别是张量的
+// EigValDir 计算张量矩阵的特征值和方向角, 其中 (v1, d1) 和 (v2, d2) 分别是张量的
 // 两个特征向量的特征值和方向角, 他们两两对应. 返回的特征值总有 v1 >= v2. d1, d2 的
 // 变化区间为 [-PI/2, PI/2]. 若 v1 == v2, 则该张量退化, 这时 singular 为 true, 且 d1,
 // d2 可以为任意值; 否则 singular 为 false.
-func (t *Tensor) EigenValDir() (v1, v2, d1, d2 float64, singular bool) {
-	if float.Equal(t.XX, t.YY) && float.Equal(t.XY, 0.0) {
+func (t *Tensor) EigValDir() (v1, v2, d1, d2 float64, singular bool) {
+	if num.Equal(t.XX, t.YY) && num.Equal(t.XY, 0.0) {
 		// 这里返回的方向角是随意选取的, 为了保持一致性, 使他们相差 PI/2
 		return t.XX, t.YY, -0.25 * math.Pi, 0.25 * math.Pi, true
 	}
 	// 针对方向角计算公式中分母可能为 0 的情况进行单独处理
-	if float.Equal(t.XX, t.YY) {
+	if num.Equal(t.XX, t.YY) {
 		d1 = -0.25 * math.Pi
 		d2 = -d1
 	} else {
@@ -111,12 +109,12 @@ func (t *Tensor) EigenValDir() (v1, v2, d1, d2 float64, singular bool) {
 	return v1, v2, d1, d2, false
 }
 
-// EigenValSlope 计算张量矩阵的特征值和方向角正切(函数导数, 曲线斜率), 其中 (v1, s1)
+// EigValSlp 计算张量矩阵的特征值和方向角正切(函数导数, 曲线斜率), 其中 (v1, s1)
 // 和 (v2, s2) 分别是张量的两个特征向量的特征值和方向角, 他们两两对应. 总有
 // v1 >= v2. 若 v1 = v2, 则该张量退化, 这时 singular 为 true, 且 s1, s2 可以为任
 // 意值; 否则 singular 为 false.
-func (t *Tensor) EigenValSlope() (v1, v2, s1, s2 float64, singular bool) {
-	v1, v2, s1, s2, singular = t.EigenValDir()
+func (t *Tensor) EigValSlp() (v1, v2, s1, s2 float64, singular bool) {
+	v1, v2, s1, s2, singular = t.EigValDir()
 	s1 = math.Tan(s1)
 	s2 = math.Tan(s2)
 	return v1, v2, s1, s2, singular

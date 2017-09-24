@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"math"
 
-	"stj/fieldline/float"
 	"stj/fieldline/geom"
+	"stj/fieldline/num"
 )
 
 // AvgQtyNumPerCell 表示设定的每个 Cell 中包含物理量(点)的平均个数.
@@ -210,7 +210,7 @@ func (g *Grid) IsAdjNodes(ni1, ni2 int) (bool, error) {
 // 如果给定点正好处在单元格 x 或 y 方向的下边界, 则认为改点不属于此单元格(场的最下侧边界除外);
 // 如果给定点正好处在单元格 x 或 y 方向的上边界, 则认为改点属于此单元格;
 func (g *Grid) CellPosIdx(x, y float64) (xi, yi, idx int, err error) {
-	if float.Equal(g.XSpan, 0.0) || float.Equal(g.YSpan, 0.0) {
+	if num.Equal(g.XSpan, 0.0) || num.Equal(g.YSpan, 0.0) {
 		err = errors.New("the Grid has not been initialized, you should initialize with NewGrid() func firstly")
 		return -1, -1, -1, err
 	}

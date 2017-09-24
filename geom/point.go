@@ -1,6 +1,8 @@
 package geom
 
-import "math"
+import (
+	"math"
+)
 
 // Point 结构体定义了二维空间的一个点.
 type Point struct {
