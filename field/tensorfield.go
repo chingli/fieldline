@@ -18,8 +18,8 @@ const (
 	TXY
 	TEV1
 	TEV2
-	TES1
-	TES2
+	TED1
+	TED2
 )
 
 // TensorQty 是张量场中一个数据点的所有信息. 其中 EV1 和 ES1 是同一个特征
@@ -30,9 +30,11 @@ type TensorQty struct {
 	PointQty
 	tensor.Tensor
 	EV1, EV2 float64 // 特征值
-	ES1, ES2 float64 // 特征向量的斜率
-	Singular bool    // 判断张量是否退化
-	aligned  bool    // 判断该张量是否已进行过对齐处理
+	// 特征向量和 x 轴的夹角, 逆时针为正, 在执行对张量场执行过 Align 操作后,
+	// 这两个数将可能与最初由张量得到的方向角有较大的差异.
+	ED1, ED2 float64
+	Singular bool // 判断张量是否退化
+	aligned  bool // 判断该张量是否已进行过对齐处理
 }
 
 // NewTensorQty 函数根据给定值创建张量场中的一个张量.
@@ -40,14 +42,14 @@ func NewTensorQty(x, y, xx, yy, xy float64) *TensorQty {
 	t := &TensorQty{}
 	t.X, t.Y = x, y
 	t.XX, t.YY, t.XY = xx, yy, xy
-	t.EV1, t.EV2, t.ES1, t.ES2, t.Singular = t.EigenValSlope()
+	t.EV1, t.EV2, t.ED1, t.ED2, t.Singular = t.EigValDir()
 	return t
 }
 
-// SwapEigen 方法将张量的两个特征值和两个特征向量斜率同时互换.
-func (t *TensorQty) SwapEigen() {
+// SwapEig 方法将张量的两个特征值和两个特征向量斜率同时互换.
+func (t *TensorQty) SwapEig() {
 	t.EV1, t.EV2 = t.EV2, t.EV1
-	t.ES1, t.ES2 = t.ES2, t.ES1
+	t.ED1, t.ED2 = t.ED2, t.ED1
 }
 
 // TensorField 代表面区域内的一个张量场(其中的张量全部为实对称张量).
@@ -98,15 +100,15 @@ func (tf *TensorField) idwTensorQty(x, y float64) (tq *TensorQty, err error) {
 			return NewTensorQty(x, y, 0.0, 0.0, 0.0), nil
 		}
 		if succ {
-			return tf.idwInterpTenQTY(qtyIdxes, x, y)
+			return tf.idwInterpTenQty(qtyIdxes, x, y)
 		}
 		// 不满足 fail 或 succ 条件, 就只能满足继续条件了, 这是加大一层 layer 继续查找.
 	}
 	return nil, errors.New("no quantities found around the given point")
 }
 
-// idwInterpTenQTY 利用 idwInterp 进行插值, 并组合获得一个张量场量.
-func (tf *TensorField) idwInterpTenQTY(qtyIdxes []int, x, y float64) (tq *TensorQty, err error) {
+// idwInterpTenQty 利用 idwInterp 进行插值, 并组合获得一个张量场量.
+func (tf *TensorField) idwInterpTenQty(qtyIdxes []int, x, y float64) (tq *TensorQty, err error) {
 	xx, err := tf.idwInterp(qtyIdxes, x, y, TXX)
 	if err != nil {
 		return nil, err
@@ -133,10 +135,10 @@ func (tf *TensorField) idwInterp(qtyIdxes []int, x, y float64, compType int) (v 
 			v = tf.data[qtyIdxes[i]].EV1
 		case TEV2:
 			v = tf.data[qtyIdxes[i]].EV2
-		case TES1:
-			v = tf.data[qtyIdxes[i]].ES1
-		case TES2:
-			v = tf.data[qtyIdxes[i]].ES2
+		case TED1:
+			v = tf.data[qtyIdxes[i]].ED1
+		case TED2:
+			v = tf.data[qtyIdxes[i]].ED2
 		}
 		ss[i] = &ScalarQty{X: tf.data[qtyIdxes[i]].X, Y: tf.data[qtyIdxes[i]].Y, V: v}
 	}
@@ -228,8 +230,8 @@ func (tf *TensorField) EV2(x, y float64) (v float64, err error) {
 	return cell.Value(x, y, ll, ul, lu, uu), nil
 }
 
-// ES1 方法通过空间插值方法获得张量场内任意点 (x, y) 处的流线函数导数(特征向量斜率) ES1.
-func (tf *TensorField) ES1(x, y float64) (v float64, err error) {
+// ED1 方法通过空间插值方法获得张量场内任意点 (x, y) 处的特征向量方向角 ED1.
+func (tf *TensorField) ED1(x, y float64) (v float64, err error) {
 	cell, err := tf.grid.Cell(x, y)
 	if err != nil {
 		return 0.0, err
@@ -238,15 +240,15 @@ func (tf *TensorField) ES1(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	ll := tf.nodes[nodeIdxes[0]].ES1
-	ul := tf.nodes[nodeIdxes[1]].ES1
-	lu := tf.nodes[nodeIdxes[2]].ES1
-	uu := tf.nodes[nodeIdxes[3]].ES1
+	ll := tf.nodes[nodeIdxes[0]].ED1
+	ul := tf.nodes[nodeIdxes[1]].ED1
+	lu := tf.nodes[nodeIdxes[2]].ED1
+	uu := tf.nodes[nodeIdxes[3]].ED1
 	return cell.Value(x, y, ll, ul, lu, uu), nil
 }
 
-// ES2 方法通过空间插值方法获得张量场内任意点 (x, y) 处的流线函数导数(特征向量斜率) ES2.
-func (tf *TensorField) ES2(x, y float64) (v float64, err error) {
+// ED2 方法通过空间插值方法获得张量场内任意点 (x, y) 处的特征向量方向角 ED2.
+func (tf *TensorField) ED2(x, y float64) (v float64, err error) {
 	cell, err := tf.grid.Cell(x, y)
 	if err != nil {
 		return 0.0, err
@@ -255,10 +257,10 @@ func (tf *TensorField) ES2(x, y float64) (v float64, err error) {
 	if err != nil {
 		return 0.0, err
 	}
-	ll := tf.nodes[nodeIdxes[0]].ES2
-	ul := tf.nodes[nodeIdxes[1]].ES2
-	lu := tf.nodes[nodeIdxes[2]].ES2
-	uu := tf.nodes[nodeIdxes[3]].ES2
+	ll := tf.nodes[nodeIdxes[0]].ED2
+	ul := tf.nodes[nodeIdxes[1]].ED2
+	lu := tf.nodes[nodeIdxes[2]].ED2
+	uu := tf.nodes[nodeIdxes[3]].ED2
 	return cell.Value(x, y, ll, ul, lu, uu), nil
 }
 
@@ -317,7 +319,7 @@ func (tf *TensorField) Align() {
 	// 将第一个点的 aligned 字段设为 true, 作为后续设置的引子(参照)
 	for idx := 0; idx < len(tf.grid.Cells); idx++ {
 		if len(tf.grid.Cells[idx].QtyIdxes) != 0 {
-			//tf.data[tf.grid.cells[idx].qtyIdxes[0]].SwapEigen()
+			//tf.data[tf.grid.cells[idx].qtyIdxes[0]].SwapEig()
 			tf.data[tf.grid.Cells[idx].QtyIdxes[0]].aligned = true
 			break
 		}
@@ -344,35 +346,65 @@ func (tf *TensorField) Align() {
 
 // align 对 ID 为 qtyIdxes 的一系列张量点进行对齐操作. 只要这些点中有一个点的方向已
 // 确定(aligned = true), 就可以进行对齐. 如果成功, 则返回 true; 否则返回 false.
+// 最初以特征向量斜率(ES1 和 ES2)为依据进行对齐操作, 但当特征向量和 y 轴平行时, 斜率
+// 为无穷大, 这时对该无穷大的斜率进行运算将会出错. 因此后来以特征向量方向角(ED1 和 ED2)
+// 为依据进行对齐操作. 但注意特征向量的方向角具有双向性和周期性, 即若一个特征向量的方向角
+// 为 a, 则所有 a+k*PI 都是其方向角. 因此, 尽管特征向量的方向是连续变化的, 但根据 tensor
+// 包中相关函数所求得的数值由于将方向角限定在 [-PI/2, PI/2] 或 [-PI/4, PI*3/4] 区间内,
+// 很可能并不是连续分布的, 即可能存在突变. 在进行对齐操作时, 应消除这种突变, 这样必须在适当
+// 的时候对 ED1 和 ED2 重新赋值. 根据特征向量场线旋转幅度的大小, 这两个变量可能会在很大的
+// 范围内取值.
 func (tf *TensorField) align(qtyIdxes []int) bool {
 	if len(qtyIdxes) <= 1 {
 		return false
 	}
 	alignedCount := 0
+	// 暂存已对齐的 ED1 标量场量以作为未对齐的标量场量的对齐参照
 	ss := make([]*ScalarQty, 0, len(qtyIdxes))
 	for i := 0; i < len(qtyIdxes); i++ {
 		if tf.data[qtyIdxes[i]].aligned {
-			ss = append(ss, &ScalarQty{X: tf.data[qtyIdxes[i]].X, Y: tf.data[qtyIdxes[i]].Y, V: tf.data[qtyIdxes[i]].ES1})
+			ss = append(ss, &ScalarQty{X: tf.data[qtyIdxes[i]].X,
+				Y: tf.data[qtyIdxes[i]].Y, V: tf.data[qtyIdxes[i]].ED1})
 			alignedCount++
 		}
 	}
-	if alignedCount == 0 {
+	if alignedCount == 0 { // 没有可供参照的点
 		return false
-	} else if alignedCount == len(qtyIdxes) {
+	} else if alignedCount == len(qtyIdxes) { // 所有点都已经被对齐过了
 		return true
 	}
 	for i := 0; i < len(qtyIdxes); i++ {
 		id := qtyIdxes[i]
 		if !tf.data[id].aligned {
-			ES1, _ := IDW(ss, tf.data[id].X, tf.data[id].Y, DefaultIDWPower)
-			if relErr(ES1, tf.data[id].ES1) > relErr(ES1, tf.data[id].ES2) {
-				tf.data[id].SwapEigen()
+			// 预计在待求点处的值
+			ed1, _ := IDW(ss, tf.data[id].X, tf.data[id].Y, DefaultIDWPower)
+			// 预估的 ed1 和实际的向量之间的夹角不能太大, 或者说, 不能超过 PI/2.
+			if includedAngle(ed1, tf.data[id].ED1) > includedAngle(ed1, tf.data[id].ED2) {
+				tf.data[id].SwapEig()
 			}
+			// TODO:
+			var k1, k2 float64
+			k1 = math.Floor(ed1 / math.Pi)
+			k2 = math.Floor(tf.data[id].ED1 / math.Pi)
+			tf.data[id].ED1 = tf.data[id].ED1 - k2*math.Pi + k1*math.Pi
+			tf.data[id].ED2 = tf.data[id].ED2 - k2*math.Pi + k1*math.Pi
+
 			tf.data[id].aligned = true
-			ss = append(ss, &ScalarQty{X: tf.data[id].X, Y: tf.data[id].Y, V: tf.data[id].ES1})
+			ss = append(ss, &ScalarQty{X: tf.data[id].X, Y: tf.data[id].Y, V: tf.data[id].ED1})
 		}
 	}
 	return true
+}
+
+// includedAngle 计算两个方向角分别为 a, b 的直线间所夹的锐角或直角. 逆时针旋转为正.
+// 若所得值为正, 表示从 a 逆时针旋转一个锐角或直角到 b; 若所得值为负, 表示从 a 顺时针旋转一个角度到 b.
+func includedAngle(a, b float64) float64 {
+	ia := math.Abs(a - b)
+	ia = ia - math.Floor(ia/math.Pi)*math.Pi
+	if ia > math.Pi/2.0 {
+		ia = math.Pi - ia
+	}
+	return ia
 }
 
 // GenNodes 根据张量场中无规则离散分布的张量场量数据 data, 通过反距离加权插值方法,

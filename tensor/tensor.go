@@ -71,7 +71,7 @@ func (t *Tensor) String() string {
 // EigVectors 计算并返回张量的特征向量. 所得 ev1 的范数(大小, 模长, 模)总是
 // 大于 ev2. 当 singular = true 时, 表示张量在此退化, 这时有 |ev1| = |ev2|, 而其
 // 指向则失去意义.
-func (t *Tensor) EigVectors(e float64) (ev1, ev2 *vector.Vector, singular bool) {
+func (t *Tensor) EigVectors() (ev1, ev2 *vector.Vector, singular bool) {
 	v1, v2, d1, d2, singular := t.EigValDir()
 	ev1 = vector.New(v1*math.Cos(d1), v1*math.Sin(d1))
 	ev2 = vector.New(v2*math.Cos(d2), v2*math.Sin(d2))

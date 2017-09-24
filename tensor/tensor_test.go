@@ -28,9 +28,14 @@ var (
 	}
 )
 
+// TODO: 方向角, 特征向量结果与 Octave 计算结果不太一致(顺序错了), 比较复杂, 程序应该没有错, 但还没有完全理清楚.
 func TestEigValDir(t *testing.T) {
 	for _, th := range tensors {
 		ev1, ev2, ed1, ed2, s := th.t.EigValDir()
+		vec1, vec2, _ := th.t.EigVectors()
+		uv1, _ := vec1.Unit()
+		uv2, _ := vec2.Unit()
+		fmt.Printf("Vector1:\n%vVector2:\n%v\n", uv1, uv2)
 		if !equal(ev1, th.ev1) || !equal(ev2, th.ev2) ||
 			// !equal(math.Abs(math.Tan(ed1)), math.Abs(math.Tan(th.ed1))) ||
 			// !equal(math.Abs(math.Tan(ed2)), math.Abs(math.Tan(th.ed2))) ||
