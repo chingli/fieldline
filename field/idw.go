@@ -10,7 +10,7 @@ import (
 // DefaultIDWPower 为 IDW() 函数默认使用的幂参数. 当其他函数调用 IDW() 时, 可将该值传给 IDW().
 var DefaultIDWPower = 3.0
 
-// IDW 函数实现了实现了多元差值算法中的一种: 反距离加权插值(Inverse Distance Weighted).
+// IDW 函数实现了实现了多元插值算法中的一种: 反距离加权插值(Inverse Distance Weighted).
 // 其中 ScalarQty 是标量场中的量, x, y 是要插值的点坐标, power 是插值的幂参数.
 // 如果 power = 0, 则表示权重不随距离减小, 且因每个权重的值均相同, 预测值将是搜索邻域内的所有数据值的平均值.
 // 随着 power 值的增大, 较远数据点的权重将迅速减小. 如果 power 值极大, 则仅最邻近的数据点会对预测产生影响.
