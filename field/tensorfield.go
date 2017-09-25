@@ -378,16 +378,26 @@ func (tf *TensorField) align(qtyIdxes []int) bool {
 		if !tf.data[id].aligned {
 			// 预计在待求点处的值
 			ed1, _ := IDW(ss, tf.data[id].X, tf.data[id].Y, DefaultIDWPower)
-			// 预估的 ed1 和实际的向量之间的夹角不能太大, 或者说, 不能超过 PI/2.
+			// 预估的 ed1 和实际的特征向量之间的夹角不能太大, 或者说, 不能超过 PI/2.
 			if includedAngle(ed1, tf.data[id].ED1) > includedAngle(ed1, tf.data[id].ED2) {
 				tf.data[id].SwapEig()
 			}
-			// TODO:
-			var k1, k2 float64
-			k1 = math.Floor(ed1 / math.Pi)
-			k2 = math.Floor(tf.data[id].ED1 / math.Pi)
-			tf.data[id].ED1 = tf.data[id].ED1 - k2*math.Pi + k1*math.Pi
-			tf.data[id].ED2 = tf.data[id].ED2 - k2*math.Pi + k1*math.Pi
+			// 由于特征向量的方向角在增减 k*PI 后, 仍是其方向角, 以下代码对方向角进行周期对齐操作.
+			// 例如, 若插值计算所得的方向角 ed1 = 192°, 而实际的方向角 ED1 = 11°, 则将进行如下调整:
+			// ED1 = ED1 + 180° = 191°. (这里用角度只是演示, 实际上是用弧度)
+			k1 := math.Floor(ed1 / math.Pi)
+			k2 := math.Floor(tf.data[id].ED1 / math.Pi)
+			// 注意: 总是应该保证两个特征向量方向角同步增减
+			tf.data[id].ED1 += (k1 - k2) * math.Pi
+			tf.data[id].ED2 += (k1 - k2) * math.Pi
+			diff := ed1 - tf.data[id].ED1
+			if diff > math.Pi/2.0 {
+				tf.data[id].ED1 += math.Pi
+				tf.data[id].ED2 += math.Pi
+			} else if diff < -math.Pi/2.0 {
+				tf.data[id].ED1 -= math.Pi
+				tf.data[id].ED2 -= math.Pi
+			}
 
 			tf.data[id].aligned = true
 			ss = append(ss, &ScalarQty{X: tf.data[id].X, Y: tf.data[id].Y, V: tf.data[id].ED1})
@@ -396,8 +406,7 @@ func (tf *TensorField) align(qtyIdxes []int) bool {
 	return true
 }
 
-// includedAngle 计算两个方向角分别为 a, b 的直线间所夹的锐角或直角. 逆时针旋转为正.
-// 若所得值为正, 表示从 a 逆时针旋转一个锐角或直角到 b; 若所得值为负, 表示从 a 顺时针旋转一个角度到 b.
+// includedAngle 计算两个方向角分别为 a, b 的直线间所夹的锐角或直角的绝对值.
 func includedAngle(a, b float64) float64 {
 	ia := math.Abs(a - b)
 	ia = ia - math.Floor(ia/math.Pi)*math.Pi
