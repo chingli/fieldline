@@ -26,8 +26,8 @@ var MinIntrplLayer = 0
 // (2*MaxIntrplLayer+1)^2 * AvgPointNumPerCell = MaxIntrplQtyNum
 var MaxIntrplLayer = int(math.Ceil((math.Sqrt(float64(MaxIntrplQtyNum)/float64(grid.AvgQtyNumPerCell)) - 1.0) * 0.5))
 
-// AsignZeroForFailIntrpl 为 true 时, 若在插值失败, 则插入零值. 若该值为 false, 在插值失败时不插入零值, 而是报告一个错误.
-var AsignZeroOnIntrplFail = true
+// AssignZeroForFailIntrpl 为 true 时, 若在插值失败, 则插入零值. 若该值为 false, 在插值失败时不插入零值, 而是报告一个错误.
+var AssignZeroOnIntrplFail = true
 
 // baseField 结构体相当于所有场结构体的基类.
 type baseField struct {

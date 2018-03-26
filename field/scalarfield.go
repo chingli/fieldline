@@ -54,7 +54,7 @@ func (sf *ScalarField) idwValue(x, y float64) (float64, error) {
 		fail := layer >= MaxIntrplLayer && num < MinIntrplQtyNum
 		succ := num >= MaxIntrplQtyNum || ((num >= MinIntrplQtyNum && num < MaxIntrplQtyNum) && layer > MinIntrplLayer)
 		if fail {
-			if !AsignZeroOnIntrplFail {
+			if !AssignZeroOnIntrplFail {
 				return 0.0, errors.New("no known point existing around the given point")
 			}
 			return 0.0, nil

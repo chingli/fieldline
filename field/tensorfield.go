@@ -94,7 +94,7 @@ func (tf *TensorField) idwTensorQty(x, y float64) (tq *TensorQty, err error) {
 		fail := layer >= MaxIntrplLayer && num < MinIntrplQtyNum
 		succ := num >= MaxIntrplQtyNum || ((num >= MinIntrplQtyNum && num < MaxIntrplQtyNum) && layer > MinIntrplLayer)
 		if fail {
-			if !AsignZeroOnIntrplFail {
+			if !AssignZeroOnIntrplFail {
 				return nil, errors.New("no known point existing around the given point")
 			}
 			return NewTensorQty(x, y, 0.0, 0.0, 0.0), nil
