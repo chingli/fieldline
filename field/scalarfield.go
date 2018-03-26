@@ -44,17 +44,17 @@ func (sf *ScalarField) Mean() (float64, error) {
 // idwValue 根据已知点数据利用 IDW 插值方法获得点 (x, y) 坐标处的值.
 func (sf *ScalarField) idwValue(x, y float64) (float64, error) {
 	xi, yi, idx, _ := sf.grid.CellPosIdx(x, y)
-	for layer := MinInterpLayer; layer <= MaxInterpLayer; layer++ {
+	for layer := MinIntrplLayer; layer <= MaxIntrplLayer; layer++ {
 		cells := sf.grid.NearCellsAlt(xi, yi, idx, layer)
 		qtyIdxes := make([]int, 0, int(1.25*grid.AvgQtyNumPerCell*float64(len(cells))))
 		for i := 0; i < len(cells); i++ {
 			qtyIdxes = append(qtyIdxes, cells[i].QtyIdxes...)
 		}
 		num := len(qtyIdxes)
-		fail := layer >= MaxInterpLayer && num < MinInterpQtyNum
-		succ := num >= MaxInterpQtyNum || ((num >= MinInterpQtyNum && num < MaxInterpQtyNum) && layer > MinInterpLayer)
+		fail := layer >= MaxIntrplLayer && num < MinIntrplQtyNum
+		succ := num >= MaxIntrplQtyNum || ((num >= MinIntrplQtyNum && num < MaxIntrplQtyNum) && layer > MinIntrplLayer)
 		if fail {
-			if !AsignZeroOnInterpFail {
+			if !AsignZeroOnIntrplFail {
 				return 0.0, errors.New("no known point existing around the given point")
 			}
 			return 0.0, nil

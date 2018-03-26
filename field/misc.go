@@ -60,8 +60,8 @@ func relErr(x1, x2 float64) float64 {
 	return math.Abs(x1-x2) / math.Max(math.Abs(x1), math.Abs(x2))
 }
 
-// posInterp 是一个进行位置插值的辅助函数. 它根据 x 轴上两点坐标 x1, x2 以及对应的两个值 v1, v2,
+// posIntrpl 是一个进行位置插值的辅助函数. 它根据 x 轴上两点坐标 x1, x2 以及对应的两个值 v1, v2,
 // 利用线性插值方法, 计算当取值为 v 时的坐标 x.
-func posInterp(x1, x2, v1, v2, v float64) float64 {
+func posIntrpl(x1, x2, v1, v2, v float64) float64 {
 	return ((v1-v)*x2 + (v-v2)*x1) / (v2 - v1)
 }

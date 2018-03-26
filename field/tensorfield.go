@@ -70,7 +70,7 @@ func (tf *TensorField) Aligned(t *TensorQty) bool {
 // idwTensorQty 根据张量场中原始无规则离散分布的 data 数据, 利反距离加权插值(IDW)方法获得任一点的张量场量.
 func (tf *TensorField) idwTensorQty(x, y float64) (tq *TensorQty, err error) {
 	xi, yi, idx, _ := tf.grid.CellPosIdx(x, y)
-	for layer := MinInterpLayer; layer <= MaxInterpLayer; layer++ {
+	for layer := MinIntrplLayer; layer <= MaxIntrplLayer; layer++ {
 		cells := tf.grid.NearCellsAlt(xi, yi, idx, layer)
 		qtyIdxes := make([]int, 0, int(1.25*grid.AvgQtyNumPerCell*float64(len(cells))))
 		for i := 0; i < len(cells); i++ {
@@ -78,49 +78,49 @@ func (tf *TensorField) idwTensorQty(x, y float64) (tq *TensorQty, err error) {
 		}
 		num := len(qtyIdxes)
 		/*
-			cond1 := layer == MinInterpLayer && num < MinInterpQtyNum                           // 继续
-			cond2 := layer == MinInterpLayer && num >= MinInterpQtyNum && num < MaxInterpQtyNum // 继续
-			cond3 := layer == MinInterpLayer && num >= MaxInterpQtyNum                          // 成功
+			cond1 := layer == MinIntrplLayer && num < MinIntrplQtyNum                           // 继续
+			cond2 := layer == MinIntrplLayer && num >= MinIntrplQtyNum && num < MaxIntrplQtyNum // 继续
+			cond3 := layer == MinIntrplLayer && num >= MaxIntrplQtyNum                          // 成功
 
-			cond4 := layer > MinInterpLayer && layer < MaxInterpLayer && num < MinInterpQtyNum  // 继续
-			cond5 := layer > MinInterpLayer && layer < MaxInterpLayer && num >= MinInterpQtyNum && num < MaxInterpQtyNum // 成功
-			cond6 := layer > MinInterpLayer && layer < MaxInterpLayer && num >= MaxInterpQtyNum // 成功
+			cond4 := layer > MinIntrplLayer && layer < MaxIntrplLayer && num < MinIntrplQtyNum  // 继续
+			cond5 := layer > MinIntrplLayer && layer < MaxIntrplLayer && num >= MinIntrplQtyNum && num < MaxIntrplQtyNum // 成功
+			cond6 := layer > MinIntrplLayer && layer < MaxIntrplLayer && num >= MaxIntrplQtyNum // 成功
 
-			cond7 := layer >= MaxInterpLayer && num < MinInterpQtyNum                          // 失败
-			cond8 := layer >= MaxInterpLayer && num >= MinInterpQtyNum && num < MaxInterpQtyNum // 成功
-			cond9 := layer >= MaxInterpLayer && num >= MaxInterpQtyNum                         // 成功
+			cond7 := layer >= MaxIntrplLayer && num < MinIntrplQtyNum                          // 失败
+			cond8 := layer >= MaxIntrplLayer && num >= MinIntrplQtyNum && num < MaxIntrplQtyNum // 成功
+			cond9 := layer >= MaxIntrplLayer && num >= MaxIntrplQtyNum                         // 成功
 		*/
 		// 以下 2 个条件根据注释中的条件合并而来
-		fail := layer >= MaxInterpLayer && num < MinInterpQtyNum
-		succ := num >= MaxInterpQtyNum || ((num >= MinInterpQtyNum && num < MaxInterpQtyNum) && layer > MinInterpLayer)
+		fail := layer >= MaxIntrplLayer && num < MinIntrplQtyNum
+		succ := num >= MaxIntrplQtyNum || ((num >= MinIntrplQtyNum && num < MaxIntrplQtyNum) && layer > MinIntrplLayer)
 		if fail {
-			if !AsignZeroOnInterpFail {
+			if !AsignZeroOnIntrplFail {
 				return nil, errors.New("no known point existing around the given point")
 			}
 			return NewTensorQty(x, y, 0.0, 0.0, 0.0), nil
 		}
 		if succ {
-			return tf.idwInterpTenQty(qtyIdxes, x, y)
+			return tf.idwIntrplTenQty(qtyIdxes, x, y)
 		}
 		// 不满足 fail 或 succ 条件, 就只能满足继续条件了, 这是加大一层 layer 继续查找.
 	}
 	return nil, errors.New("no quantities found around the given point")
 }
 
-// idwInterpTenQty 利用 idwInterp 进行插值, 并组合获得一个张量场量.
-func (tf *TensorField) idwInterpTenQty(qtyIdxes []int, x, y float64) (tq *TensorQty, err error) {
-	xx, err := tf.idwInterp(qtyIdxes, x, y, TXX)
+// idwIntrplTenQty 利用 idwIntrpl 进行插值, 并组合获得一个张量场量.
+func (tf *TensorField) idwIntrplTenQty(qtyIdxes []int, x, y float64) (tq *TensorQty, err error) {
+	xx, err := tf.idwIntrpl(qtyIdxes, x, y, TXX)
 	if err != nil {
 		return nil, err
 	}
-	yy, _ := tf.idwInterp(qtyIdxes, x, y, TYY)
-	xy, _ := tf.idwInterp(qtyIdxes, x, y, TXY)
+	yy, _ := tf.idwIntrpl(qtyIdxes, x, y, TYY)
+	xy, _ := tf.idwIntrpl(qtyIdxes, x, y, TXY)
 	tq = NewTensorQty(x, y, xx, yy, xy)
 	return tq, nil
 }
 
-// idwInterp 利用 IDW 方法进行插值, 获得一个浮点数.
-func (tf *TensorField) idwInterp(qtyIdxes []int, x, y float64, compType int) (v float64, err error) {
+// idwIntrpl 利用 IDW 方法进行插值, 获得一个浮点数.
+func (tf *TensorField) idwIntrpl(qtyIdxes []int, x, y float64, compType int) (v float64, err error) {
 	ss := make([]*ScalarQty, len(qtyIdxes))
 	for i := 0; i < len(qtyIdxes); i++ {
 		v := 0.0
