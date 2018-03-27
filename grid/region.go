@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-// PointRegion, CurveRegion, RegionSng 表示退化的类型.
+// PointRegionType, CurveRegionType, RegionRegionType, CompositeRegionType 表示几何形状的类型.
 const (
 	PointRegionType = 1 << iota
 	CurveRegionType
@@ -13,15 +13,16 @@ const (
 	CompositeRegionType
 )
 
-// Region 代表一个退化类型.
+// Region 接口代表网格内一个连续的几何形状.
 type Region interface {
-	// Form 用来标志该退化是属于退化点, 退化曲线或退化区域, 其值只应该是 PointRegion, CurveRegion 或 RegionRegion.
+	// Type 用来标志该几何形状是属于点, 曲线, 区域, 或是由区域和曲线构成的复合类型.
+	// 其值只应该是 PointRegionType, CurveRegionType, RegionRegionType 或 CompositeRegionType.
 	Type() int
 	// Index 表示向量或张量场中某个孤立奇点的庞加莱(Polincare) 指数, 即所谓的向量指数或张量指数.
 	//Index() int
 }
 
-// shape 结构体代表场中的退化点, 退化曲线或退化区域.
+// shape 结构体代表网格中几何形体的实际表示. 该结构体是各类退化形状的基类, 它实现了 Region 接口.
 type shape struct {
 	shapeType int
 	nodes     []int
@@ -49,9 +50,9 @@ type RegionRegion struct {
 	border []int
 }
 
-// GroupRegion 是一个奇异区域以及由此奇异区域延伸出的奇异曲线组成的复合奇异构件.
+// CompositeRegion 是一个奇异区域以及由此奇异区域延伸出的奇异曲线组成的复合奇异构件.
 // TODO: 由于其复杂性, 关于此结构体的操作在短期内不准备实现.
-type GroupRegion struct {
+type CompositeRegion struct {
 	shape
 	borders [][]int
 	curves  [][]int
